@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>段永平「保险公司式」期权策略 · 内容笔记</title>
+  <style>
+    :root {
+      --bg: #f7f4ef;
+      --ink: #1a1a1a;
+      --muted: #5c5c5c;
+      --line: #d9d2c6;
+      --accent: #0b5f4b;
+      --card: #fffdf9;
+      --warn: #7a3e00;
+      --warn-bg: #fff3e0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Noto Sans SC", "Source Han Sans SC", system-ui, sans-serif;
+      background: linear-gradient(180deg, #efe8dc 0%, var(--bg) 28%, #f3efe8 100%);
+      color: var(--ink);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 1.25rem 1rem 3rem;
+    }
+    header h1 {
+      font-size: clamp(1.35rem, 4.5vw, 1.75rem);
+      line-height: 1.3;
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 1rem;
+    }
+    .meta a { color: var(--accent); }
+    .disclaimer {
+      background: var(--warn-bg);
+      color: var(--warn);
+      border-left: 3px solid #d Troubleshoot;
+      border-left: 3px solid #e0a04a;
+      padding: 0.75rem 0.9rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+    }
+    .verdict {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1rem 1.05rem;
+      margin-bottom: 1.5rem;
+    }
+    .verdict strong { color: var(--accent); }
+    h2 {
+      font-size: 1.15rem;
+      margin: 1.75rem 0 0.75rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid var(--line);
+    }
+    h3 { font-size: 1.02rem; margin: 1.1rem 0 0.4rem; }
+    p, li { font-size: 0.98rem; }
+    ul, ol { padding-left: 1.2rem; }
+    li { margin: 0.35rem 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+      background: var(--card);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+    th, td {
+      text-align: left;
+      padding: 0.55rem 0.65rem;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th {
+      background: #ebe4d8;
+      width: 38%;
+      font-weight: 600;
+    }
+    tr:last-child th, tr:last-child td { border-bottom: none; }
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0.75rem 0 1rem;
+    }
+    .note {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>段永平「保险公司式」期权策略</h1>
+      <p class="meta">
+        来源：<a href="https://www.bilibili.com/video/BV12F376xErv/">Bilibili BV12F376xErv</a>
+        · UP 投机实验室 · 约 14 分钟<br />
+        主题：卖 Put 进、卖 Call 出，以及 SpaceX 一笔约 232 万美元权利金的实盘
+      </p>
+    </header>
+
+    <div class="disclaimer">
+      免责声明：公开信息整理与学习笔记，不构成投资建议。期权有杠杆与强制接货/交割风险，勿盲目模仿。
+    </div>
+
+    <section class="verdict">
+      <strong>一句话结论：</strong>
+      段永平几乎只卖期权、不买期权——在看好的好公司上，用卖 Put（潜在接货）和卖 Call（潜在出货）收「保费」，把长线价值判断做成可循环的现金流生意（「开保险公司」「长线短做」）。
+    </section>
+
+    <h2>SpaceX 这笔单</h2>
+    <p>雪球「大道无形我有型」晒出 SpaceX（SPCX）期权成交，并称「支持一下马斯克的梦想」：</p>
+    <div class="table-scroll">
+      <table>
+        <tr><th>方向</th><td>Sell to Open Put（卖出看跌）</td></tr>
+        <tr><th>数量</th><td>1000 张（约 10 万股）</td></tr>
+        <tr><th>行权价</th><td>$115</td></tr>
+        <tr><th>到期</th><td>2026-12-18</td></tr>
+        <tr><th>成交权利金</th><td>约 $23.26 / 股</td></tr>
+        <tr><th>合计保费</th><td>约 <strong>232 万美元</strong></td></tr>
+        <tr><th>名义接货规模</th><td>约 <strong>1150 万美元</strong>（标题中的「1150 万交易」）</td></tr>
+        <tr><th>若被行权有效成本</th><td>约 $91.74（115 − 23.26）</td></tr>
+        <tr><th>期限粗算</th><td>约 5 个月，相对行权价约 25%，年化约 60%（示意）</td></tr>
+      </table>
+    </div>
+    <ol>
+      <li><strong>到期价 ≥ 115：</strong> Put 作废，232 万保费落袋。</li>
+      <li><strong>到期价 &lt; 115：</strong> 按 115 接货；成本被保费摊薄。前提是本来就愿意持有。</li>
+    </ol>
+
+    <h2>卖 Put 进、卖 Call 出</h2>
+    <h3>1. 卖 Put = 保险公司 + 潜在接货</h3>
+    <ul>
+      <li>收保费，承诺跌破行权价时按约定价买走股票。</li>
+      <li>未跌破 → 白赚保费；跌破 → 接货但成本已被摊薄。</li>
+      <li><strong>硬前提：</strong> 备足现金（常放 T-Bill 生息），能扛被行权。</li>
+    </ul>
+    <h3>2. 卖 Call（多为 Covered Call）= 高价出货通道</h3>
+    <ul>
+      <li>有正股抵押再卖 Call：涨过行权价则有义务按约定价卖出。</li>
+      <li>未涨过再收保费；涨过则「卖 Call 出」。</li>
+    </ul>
+    <h3>3. 长线短做循环</h3>
+    <ol>
+      <li>研究公司，形成长期价值判断</li>
+      <li>价格合理/偏低 → 卖 Put，现金继续吃利息</li>
+      <li>未被行权 → 保费落袋，继续卖 Put</li>
+      <li>被行权 → 拿到正股</li>
+      <li>股价偏高 → 卖 Covered Call</li>
+      <li>Call 被行权 → 高价卖出，回到现金，循环</li>
+    </ol>
+
+    <h2>他强调的边界</h2>
+    <ul>
+      <li>不赚认知以外的钱；不了解公司就不卖 Option</li>
+      <li>几乎只卖不买期权</li>
+      <li>过低不卖 Call、过高不卖 Put</li>
+      <li>目标克制：跑赢标普 / 国债一类基准即可</li>
+      <li>卖 Put 备现金，卖 Call 通常要有持股</li>
+    </ul>
+    <p class="note">同逻辑也曾用于英伟达、苹果、腾讯、泡泡玛特等（「××保险公司」）。</p>
+
+    <h2>视频速览</h2>
+    <div class="table-scroll">
+      <table>
+        <tr><th>BV</th><td><a href="https://www.bilibili.com/video/BV12F376xErv/">BV12F376xErv</a></td></tr>
+        <tr><th>UP</th><td>投机实验室</td></tr>
+        <tr><th>时长</th><td>约 14:24</td></tr>
+        <tr><th>公开</th><td>2026-07-26</td></tr>
+      </table>
+    </div>
+
+    <footer>
+      参考：
+      <a href="https://www.odaily.news/zh-CN/newsflash/503774">Odaily 快讯</a> ·
+      <a href="https://www.btcfans.com/zh-cn/flash/id-213208">BlockBeats / 比特范</a><br />
+      B 站页无可用字幕 / AI 总结接口；笔记按标题与公开披露整理。Markdown 版见同目录
+      <code>duan-spacex-options-summary.md</code>。
+    </footer>
+  </div>
+</body>
+</html>
