@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Claude × TradingView MCP · 操作笔记</title>
+  <style>
+    :root {
+      --bg: #f4f7f6;
+      --ink: #15201c;
+      --muted: #5a6a64;
+      --line: #c9d6d0;
+      --accent: #0d6b56;
+      --card: #ffffff;
+      --warn: #7a3e00;
+      --warn-bg: #fff3e0;
+      --code-bg: #e8efec;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Noto Sans SC", "Source Han Sans SC", system-ui, sans-serif;
+      background: linear-gradient(180deg, #dce8e3 0%, var(--bg) 30%, #eef3f1 100%);
+      color: var(--ink);
+      line-height: 1.65;
+      font-size: 16px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+    h1 {
+      font-size: clamp(1.3rem, 4.5vw, 1.7rem);
+      line-height: 1.3;
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    .meta { color: var(--muted); font-size: 0.92rem; margin-bottom: 1rem; }
+    .meta a { color: var(--accent); }
+    .disclaimer {
+      background: var(--warn-bg);
+      color: var(--warn);
+      border-left: 3px solid #e0a04a;
+      padding: 0.75rem 0.9rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+    }
+    .verdict {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1rem 1.05rem;
+      margin-bottom: 1.5rem;
+    }
+    .verdict strong { color: var(--accent); }
+    h2 {
+      font-size: 1.15rem;
+      margin: 1.75rem 0 0.75rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid var(--line);
+    }
+    h3 { font-size: 1.02rem; margin: 1.1rem 0 0.4rem; }
+    ul, ol { padding-left: 1.2rem; }
+    li { margin: 0.35rem 0; }
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0.75rem 0 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.55rem 0.65rem;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th { background: #dfeae5; font-weight: 600; width: 34%; }
+    tr:last-child th, tr:last-child td { border-bottom: none; }
+    pre, code {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.85rem 0.9rem;
+      overflow-x: auto;
+      line-height: 1.45;
+    }
+    .note { color: var(--muted); font-size: 0.88rem; }
+    footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Claude × TradingView：接进看盘台</h1>
+      <p class="meta">
+        来源：<a href="https://www.bilibili.com/video/BV16Dgr61EFU/">BV16Dgr61EFU</a>
+        · UP 投机实验室 · 约 6:47<br />
+        项目：<a href="https://github.com/tradesdontlie/tradingview-mcp">tradesdontlie/tradingview-mcp</a>
+      </p>
+    </header>
+
+    <div class="disclaimer">
+      工具只操作本机 TradingView Desktop，不自动实盘下单；需合法订阅。笔记供搭建学习，非投资建议。
+    </div>
+
+    <section class="verdict">
+      <strong>一句话：</strong>
+      用 MCP 把 Claude Code 接到本机 TradingView（Chrome DevTools Protocol），实现看盘、写 Pine、出研报、Replay 复盘——把交易员流程固化成 AI 工作流。
+    </section>
+
+    <h2>视频能力对照</h2>
+    <div class="table-scroll">
+      <table>
+        <tr><th>自己看盘</th><td><code>chart-analysis</code>：报价、指标、Pine 线/标签、截图</td></tr>
+        <tr><th>写策略</th><td><code>pine-develop</code>：写 → 注入 → 编译 → 修错</td></tr>
+        <tr><th>出研报</th><td><code>strategy-report</code>：回测指标 + 成交 + 权益曲线</td></tr>
+        <tr><th>远程复盘</th><td><code>replay-practice</code>：逐步走 K、模拟买卖</td></tr>
+        <tr><th>蒸馏交易员</th><td>对齐其布局/指标，把分析步骤写成 skills/提示词</td></tr>
+      </table>
+    </div>
+
+    <h2>操作步骤</h2>
+    <h3>1. 安装</h3>
+    <pre>git clone https://github.com/tradesdontlie/tradingview-mcp.git ~/tradingview-mcp
+cd ~/tradingview-mcp
+npm install</pre>
+
+    <h3>2. MCP 配置</h3>
+    <p>写入 <code>~/.claude/.mcp.json</code>（或项目 <code>.mcp.json</code>）：</p>
+    <pre>{
+  "mcpServers": {
+    "tradingview": {
+      "command": "node",
+      "args": ["/绝对路径/tradingview-mcp/src/server.js"]
+    }
+  }
+}</pre>
+
+    <h3>3. 调试口启动 TradingView</h3>
+    <ul>
+      <li>推荐：Claude 调用 <code>tv_launch</code></li>
+      <li>或脚本：<code>launch_tv_debug_mac.sh</code> / <code>.bat</code> / <code>_linux.sh</code></li>
+      <li>手动：<code>TradingView --remote-debugging-port=9222</code></li>
+    </ul>
+
+    <h3>4. 验活</h3>
+    <p>重启 Claude Code，说：Use <code>tv_health_check</code> to verify TradingView is connected</p>
+
+    <h2>可直接贴给 Claude 的安装句</h2>
+    <pre>Install the TradingView MCP server. Clone https://github.com/tradesdontlie/tradingview-mcp.git, run npm install, add it to my MCP config at ~/.claude/.mcp.json, and launch TradingView with the debug port. Then verify with tv_health_check.</pre>
+
+    <h2>前置条件</h2>
+    <ul>
+      <li>TradingView Desktop + 付费订阅</li>
+      <li>Node.js 18+</li>
+      <li>Claude Code（MCP）</li>
+      <li>本机打开端口 9222</li>
+    </ul>
+    <p class="note">不连 TV 服务器、不绕付费墙、不替你实盘下单。</p>
+
+    <h2>视频速览</h2>
+    <div class="table-scroll">
+      <table>
+        <tr><th>BV</th><td><a href="https://www.bilibili.com/video/BV16Dgr61EFU/">BV16Dgr61EFU</a></td></tr>
+        <tr><th>时长</th><td>约 6:47</td></tr>
+        <tr><th>公开</th><td>2026-07-22</td></tr>
+        <tr><th>标签</th><td>Claude / MCP / TradingView / 自动化</td></tr>
+      </table>
+    </div>
+
+    <footer>
+      Markdown 版：同目录 <code>claude-tradingview-mcp-notes.md</code><br />
+      步骤按视频主题与开源仓库 SETUP_GUIDE 整理。
+    </footer>
+  </div>
+</body>
+</html>
