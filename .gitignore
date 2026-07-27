@@ -1,0 +1,11 @@
+# Dependencies
+**/node_modules/
+
+# Legacy Claude Code MCP path (not used; Cursor uses .cursor/mcp.json)
+.mcp.json
+.mcp.json.local
+
+# TradingView MCP local artifacts
+tools/tradingview-mcp/scripts/current.pine
+tools/tradingview-mcp/*.log
+tools/tradingview-mcp/screenshots/
