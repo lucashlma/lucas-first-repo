@@ -8,6 +8,34 @@
 
 ---
 
+## 本仓库一键复制（推荐）
+
+仓库已内置上游源码与安装脚本，在本机（有 TradingView Desktop + Claude Code）执行：
+
+```bash
+bash scripts/setup-claude-tradingview.sh
+```
+
+脚本会：`npm install` → 生成项目级 `.mcp.json`（绝对路径）→ 合并写入 `~/.claude/.mcp.json` → 尝试 `npm link` 出 `tv` 命令。
+
+然后：
+
+```bash
+# 启动带调试口的 TradingView
+bash scripts/launch-tradingview-debug.sh
+
+# 重启 Claude Code 后验活
+# 「Use tv_health_check to verify TradingView is connected」
+# 或：
+node tools/tradingview-mcp/src/cli/index.js status
+```
+
+源码目录：`tools/tradingview-mcp/`（vendored from [tradesdontlie/tradingview-mcp](https://github.com/tradesdontlie/tradingview-mcp)）。
+
+> 当前云环境无 TradingView Desktop，`tv status` 会报 CDP 连接失败属预期；请在你的电脑上完成第 2 步起的操作。
+
+---
+
 ## 一句话结论
 
 用 **MCP** 把 **Claude Code** 接到本机 **TradingView Desktop**（经 Chrome DevTools Protocol），让 AI 能：**看盘、改图表、写/编译 Pine、出策略研报、Replay 复盘**——视频标题里的「蒸馏交易员」= 把顶级交易员的图表/指标/流程变成可复用的 AI 工作流。
