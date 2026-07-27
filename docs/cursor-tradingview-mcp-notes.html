@@ -114,10 +114,11 @@
     </div>
 
     <section class="verdict">
-      <strong>一键复制：</strong>
+      <strong>直接跑：</strong>
       <pre style="margin:0.6rem 0 0;border:none;padding:0;background:transparent">bash scripts/setup-cursor-tradingview.sh
-bash scripts/launch-tradingview-debug.sh</pre>
-      然后在 Cursor → Settings → MCP 启用 <code>tradingview</code>，对话里说 Use tv_health_check…
+bash scripts/install-and-launch-tradingview.sh
+node tools/tradingview-mcp/src/cli/index.js status</pre>
+      Cursor → Settings → MCP 启用 <code>tradingview</code>。云环境已实测 CDP 连通并可读写图表。
     </section>
 
     <section class="verdict">
