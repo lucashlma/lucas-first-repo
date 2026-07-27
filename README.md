@@ -11,18 +11,17 @@
   - 灵感视频：[Bilibili BV16Dgr61EFU](https://www.bilibili.com/video/BV16Dgr61EFU/)
   - 上游：[tradesdontlie/tradingview-mcp](https://github.com/tradesdontlie/tradingview-mcp)
 
-## Cursor × TradingView（复制操作）
-
-本机需：**Cursor** + TradingView Desktop + Node 18+
+## Cursor × TradingView（已可直接跑）
 
 ```bash
 bash scripts/setup-cursor-tradingview.sh
-bash scripts/launch-tradingview-debug.sh
+bash scripts/install-and-launch-tradingview.sh   # 安装 TV Desktop + CDP :9222
+# 若弹出 Welcome：点右上角 X 关闭即可（未登录功能有限）
+node tools/tradingview-mcp/src/cli/index.js status
+node tools/tradingview-mcp/src/cli/index.js quote
 ```
 
-然后在 Cursor：**Settings → MCP** 启用 `tradingview`，在 Agent 中说：
+Cursor：**Settings → MCP** 启用 `tradingview`（项目配置见 [`.cursor/mcp.json`](.cursor/mcp.json)）。
 
-`Use tv_health_check to verify TradingView is connected`
-
-- 项目 MCP：[`.cursor/mcp.json`](.cursor/mcp.json)（`${workspaceFolder}`，可提交）
 - 源码：`tools/tradingview-mcp/`
+- 云环境已实测：`cdp_connected: true`，可读 AAPL 报价并切换 BTCUSD

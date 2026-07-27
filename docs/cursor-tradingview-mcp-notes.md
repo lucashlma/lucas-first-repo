@@ -8,28 +8,25 @@
 
 ---
 
-## 本仓库一键复制（Cursor）
+## 本仓库直接操作（Cursor）
 
 ```bash
 bash scripts/setup-cursor-tradingview.sh
-bash scripts/launch-tradingview-debug.sh
+bash scripts/install-and-launch-tradingview.sh
+# Welcome 对话框点 X 关闭后：
+node tools/tradingview-mcp/src/cli/index.js status
+node tools/tradingview-mcp/src/cli/index.js quote
 ```
 
-然后在 Cursor：**Settings → MCP** 启用 `tradingview`（或 Reload Window）。
-
-在 Agent 对话里说：
-
-> Use tv_health_check to verify TradingView is connected
+然后在 Cursor：**Settings → MCP** 启用 `tradingview`。Agent 可说：`Use tv_health_check…`
 
 | 文件 | 作用 |
 |------|------|
-| `.cursor/mcp.json` | Cursor 项目级 MCP（`${workspaceFolder}`，可提交） |
-| `~/.cursor/mcp.json` | 可选全局配置（setup 会写入绝对路径） |
+| `.cursor/mcp.json` | Cursor 项目级 MCP（`${workspaceFolder}`） |
+| `scripts/install-and-launch-tradingview.sh` | 下载安装 TV Desktop + CDP :9222 |
 | `tools/tradingview-mcp/` | vendored MCP 源码 |
-| `scripts/launch-tradingview-debug.sh` | 带 `--remote-debugging-port=9222` 启动 TV |
 
-> 云环境无 TradingView Desktop 时，`tv status` 报 CDP 失败属预期。
-
+**云环境实测（2026-07-27）：** 已安装 TradingView 3.3.0，CDP 连通，`api_available: true`，成功读 `BATS:AAPL` 报价并切换 `BITSTAMP:BTCUSD`。
 ---
 
 ## 一句话结论

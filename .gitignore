@@ -8,3 +8,4 @@
 # TradingView MCP local artifacts
 tools/tradingview-mcp/scripts/current.pine
 tools/tradingview-mcp/*.log
+tools/tradingview-mcp/screenshots/
