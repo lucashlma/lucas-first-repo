@@ -14,13 +14,66 @@ pip install tigeropen
 
 ### 配置
 
-先在老虎的开放平台申请 OpenAPI 权限，生成 RSA 密钥对并上传公钥，然后把凭证放进环境变量。私钥只留在本机，不要提交进仓库。
+**前提**：已完成老虎证券开户并入金。OpenAPI 本身免费，但 **API 行情权限独立于 APP，需要单独购买**——APP 里能看期权报价不代表 API 能拉到。
+
+**第一步：拿凭证**
+
+登录[开发者中心](https://developer.itigerup.com/profile)，页面上直接显示 Tiger ID。点「生成密钥」生成 RSA 密钥对，下载 `tiger_openapi_config.properties`。
+
+私钥**不会保存在老虎服务端**，页面刷新后就消失，务必当场存好。丢了只能点「重新生成」换一对。
+
+账户号格式：
+
+| 账户类型 | 格式 | 示例 |
+|---|---|---|
+| 综合账号 | 8 位数字 | `51230321` |
+| 环球账号 | U 开头 | `U12300123` |
+| 模拟账号 | 17 位数字 | `20191106192858300` |
+
+也可以在老虎 APP「我的 → 账户管理」里查。**建议先用模拟账号跑通再换实盘。**
+
+**第二步：设环境变量**
+
+方式一（推荐），用下载的配置文件：
 
 ```bash
-export TIGER_ID=your_tiger_id
-export TIGER_ACCOUNT=your_account
-export TIGER_PRIVATE_KEY_PATH=~/.tiger/rsa_private_key.pem
+mkdir -p ~/.tiger && chmod 700 ~/.tiger
+# 把 tiger_openapi_config.properties 放进 ~/.tiger/
+echo 'export TIGER_PROPS_PATH=~/.tiger' >> ~/.zshrc && source ~/.zshrc
 ```
+
+方式二，手动指定：
+
+```bash
+export TIGER_ID=你的tiger_id
+export TIGER_ACCOUNT=你的账户号
+export TIGER_PRIVATE_KEY_PATH=~/.tiger/rsa_private_key.pem
+export TIGER_LICENSE=TBSG   # 可选
+```
+
+私钥推荐 **PKCS#8** 格式（文件头 `-----BEGIN PRIVATE KEY-----`）。如果拿到的是 PKCS#1（文件头 `-----BEGIN RSA PRIVATE KEY-----`）：
+
+```bash
+openssl pkcs8 -topk8 -inform PEM -in private_pkcs1.pem -outform PEM -nocrypt -out private_pkcs8.pem
+chmod 600 ~/.tiger/*.pem
+```
+
+**第三步：验证**
+
+```bash
+python tiger_options.py quote SPCX
+```
+
+常见报错：
+
+| 报错 | 原因 |
+|---|---|
+| `tigerId ... is illegal` | Tiger ID 填错，或有多余空格换行 |
+| `public key error` (code=1000) | tiger_id 没正确传到服务端 |
+| `Could not deserialize key data` | 私钥格式不对，转成 PKCS#8 |
+| 期权链返回空 | 没买 API 期权行情权限 |
+
+私钥只留本机，`.gitignore` 已排除 `*.pem` 和 `.env`。
 
 ### 用法
 
