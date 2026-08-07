@@ -161,3 +161,49 @@ def test_grab_calls_sdk_and_warns_about_app(capsys):
     assert client.grabbed is True
     assert "抢占到本设备" in out
     assert "APP 端的行情会因此失效" in out
+
+
+class FakeQuoteBrief:
+    """模拟 SDK 返回的对象（非 DataFrame）。"""
+
+    def __init__(self, symbol, price):
+        self.symbol = symbol
+        self.latest_price = price
+
+    def __str__(self):
+        return f"QuoteBrief(symbol={self.symbol}, latest_price={self.latest_price})"
+
+
+def test_render_dataframe():
+    df = make_chain([{"symbol": "SPCX", "latest_price": 114.92}])
+    out = tiger_options._render(df)
+    assert "SPCX" in out and "114.92" in out
+
+
+def test_render_object_list_does_not_crash():
+    # 这正是 get_briefs 返回 list 时曾触发 AttributeError 的场景
+    out = tiger_options._render([FakeQuoteBrief("SPCX", 114.92), FakeQuoteBrief("AAOI", 133.77)])
+    assert "SPCX" in out and "AAOI" in out
+    assert "114.92" in out
+
+
+def test_render_empty_cases():
+    assert tiger_options._render(None) == "(无数据)"
+    assert tiger_options._render([]) == "(无数据)"
+    assert tiger_options._render(make_chain([])) == "(无数据)"
+
+
+def test_quote_uses_stock_briefs_not_briefs(capsys):
+    calls = []
+
+    class C:
+        def get_stock_briefs(self, symbols, include_hour_trading=False):
+            calls.append(("get_stock_briefs", symbols))
+            return make_chain([{"symbol": s, "latest_price": 114.92} for s in symbols])
+
+        def get_briefs(self, symbols):
+            raise AssertionError("不应调用已弃用的 get_briefs")
+
+    tiger_options.cmd_quote(C(), types.SimpleNamespace(symbols=["SPCX"]))
+    assert calls == [("get_stock_briefs", ["SPCX"])]
+    assert "SPCX" in capsys.readouterr().out

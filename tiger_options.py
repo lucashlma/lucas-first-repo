@@ -165,14 +165,28 @@ def cmd_grab(quote_client, args) -> None:
     print("\n注意：APP 端的行情会因此失效，在 APP 里重新查看行情会把权限抢回去。")
 
 
+def _render(result) -> str:
+    """SDK 有的接口返回 DataFrame，有的返回对象列表，统一成可打印文本。"""
+    if result is None:
+        return "(无数据)"
+    if hasattr(result, "to_string"):
+        return "(无数据)" if len(result) == 0 else result.to_string(index=False)
+    if isinstance(result, (list, tuple)):
+        if not result:
+            return "(无数据)"
+        return "\n".join(str(item) for item in result)
+    return str(result)
+
+
 def cmd_quote(quote_client, args) -> None:
-    briefs = quote_client.get_briefs(args.symbols)
-    print(briefs.to_string(index=False))
+    # get_briefs 返回对象列表且官方标记为不推荐，get_stock_briefs 返回 DataFrame。
+    briefs = quote_client.get_stock_briefs(args.symbols, include_hour_trading=True)
+    print(_render(briefs))
 
 
 def cmd_expirations(quote_client, args) -> None:
     expirations = quote_client.get_option_expirations(symbols=[args.symbol])
-    print(expirations.to_string(index=False))
+    print(_render(expirations))
 
 
 def _fetch_chain(quote_client, symbol: str, expiry: str):
@@ -200,7 +214,7 @@ def cmd_chain(quote_client, args) -> None:
         )
         if c in chain.columns
     ]
-    print(chain[keep].sort_values("strike").to_string(index=False))
+    print(_render(chain[keep].sort_values("strike")))
 
 
 def cmd_spread(quote_client, args) -> None:
@@ -267,11 +281,10 @@ def cmd_spread(quote_client, args) -> None:
 
 def cmd_positions(trade_client, args) -> None:
     positions = trade_client.get_positions(account=args.account)
-    if not positions:
+    if positions is None or len(positions) == 0:
         print("没有持仓。")
         return
-    for p in positions:
-        print(p)
+    print(_render(positions))
 
 
 def build_parser() -> argparse.ArgumentParser:
