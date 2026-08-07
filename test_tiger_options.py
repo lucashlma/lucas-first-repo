@@ -1,0 +1,108 @@
+"""tiger_options 估值逻辑的离线测试，用假的期权链，不接触真实 API。"""
+
+import types
+import pandas as pd
+import pytest
+
+import tiger_options
+
+
+def make_chain(rows):
+    return pd.DataFrame(rows)
+
+
+class FakeQuoteClient:
+    def __init__(self, chain):
+        self._chain = chain
+
+    def get_option_chain(self, symbol, expiry):
+        return self._chain
+
+
+AAOI_CHAIN = make_chain([
+    {"identifier": "AAOI 20260821 133 CALL", "strike": 133.0, "put_call": "CALL",
+     "bid_price": 12.60, "ask_price": 12.80},
+    {"identifier": "AAOI 20260821 170 CALL", "strike": 170.0, "put_call": "CALL",
+     "bid_price": 4.00, "ask_price": 4.20},
+])
+
+
+def run_spread(capsys, chain, **kwargs):
+    args = types.SimpleNamespace(
+        symbol="AAOI", expiry="2026-08-21", side="CALL",
+        long=133.0, short=170.0, qty=8, cost=10.65,
+    )
+    for k, v in kwargs.items():
+        setattr(args, k, v)
+    tiger_options.cmd_spread(FakeQuoteClient(chain), args)
+    return capsys.readouterr().out
+
+
+def test_mid_prices_and_spread_value(capsys):
+    out = run_spread(capsys, AAOI_CHAIN)
+    # 长腿中值 12.70，短腿中值 4.10，价差 8.60
+    assert "中值 12.70" in out
+    assert "中值 4.10" in out
+    assert "价差中值        8.60" in out
+
+
+def test_conservative_exit_uses_adverse_side(capsys):
+    out = run_spread(capsys, AAOI_CHAIN)
+    # 卖长腿走 bid 12.60，买短腿走 ask 4.20 -> 8.40
+    assert "保守平仓价      8.40" in out
+
+
+def test_breakeven_and_max_values(capsys):
+    out = run_spread(capsys, AAOI_CHAIN)
+    assert "打平点          143.65" in out
+    assert "最大亏损        10.65" in out          # 每组
+    assert "$8,520" in out                          # 8 组合计
+    assert "最大盈利        26.35" in out
+    assert "$21,080" in out
+
+
+def test_unrealized_pnl_matches_broker_screenshot(capsys):
+    out = run_spread(capsys, AAOI_CHAIN)
+    # (8.60 - 10.65) * 100 * 8 = -1,640
+    assert "$-1,640" in out
+
+
+def test_deep_itm_spread_approaches_max_profit(capsys):
+    chain = make_chain([
+        {"strike": 133.0, "put_call": "CALL", "bid_price": 44.0, "ask_price": 44.4},
+        {"strike": 170.0, "put_call": "CALL", "bid_price": 10.8, "ask_price": 11.2},
+    ])
+    out = run_spread(capsys, chain)
+    # 价差 33.2，占最大利润 (33.2-10.65)/26.35 = 85.6%
+    assert "价差中值        33.20" in out
+    assert "已实现占最大利润 85.6%" in out
+
+
+def test_missing_strike_is_reported(capsys):
+    with pytest.raises(SystemExit, match="找不到行权价"):
+        run_spread(capsys, AAOI_CHAIN, short=175.0)
+
+
+def test_put_side_is_filtered(capsys):
+    chain = make_chain([
+        {"strike": 100.0, "put_call": "PUT", "bid_price": 6.5, "ask_price": 6.7},
+        {"strike": 90.0, "put_call": "PUT", "bid_price": 3.4, "ask_price": 3.6},
+        {"strike": 100.0, "put_call": "CALL", "bid_price": 99.0, "ask_price": 99.9},
+    ])
+    args = dict(side="PUT", long=90.0, short=100.0, qty=1, cost=-3.1)
+    out = run_spread(capsys, chain, **args)
+    # 只取 PUT 腿：90 中值 3.50，100 中值 6.60
+    assert "中值 3.50" in out
+    assert "中值 6.60" in out
+
+
+def test_one_sided_quote_falls_back():
+    assert tiger_options._mid(None, 5.0) == 5.0
+    assert tiger_options._mid(3.0, None) == 3.0
+    assert tiger_options._mid(None, None) is None
+    assert tiger_options._mid(3.0, 5.0) == 4.0
+
+
+def test_empty_chain_raises():
+    with pytest.raises(SystemExit, match="没有返回期权链数据"):
+        tiger_options._fetch_chain(FakeQuoteClient(make_chain([])), "AAOI", "2026-08-21")
