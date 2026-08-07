@@ -3,10 +3,16 @@
 
 只读：本脚本不包含任何下单、撤单、修改仓位的调用。
 
-凭证从环境变量读取，不接受命令行传入，避免出现在 shell history 里：
+凭证从环境变量读取，不接受命令行传入，避免出现在 shell history 里。
+
+方式一（推荐）——用开发者中心下载的配置文件：
+    TIGER_PROPS_PATH        tiger_openapi_config.properties 所在目录
+
+方式二——手动指定：
     TIGER_ID                老虎开放平台的 tiger id
     TIGER_ACCOUNT           账户号（模拟盘或实盘）
     TIGER_PRIVATE_KEY_PATH  RSA 私钥文件路径
+    TIGER_LICENSE           可选，如 TBSG / TBNZ
 
 用法：
     python tiger_options.py quote AAOI SPCX
@@ -23,27 +29,51 @@ import os
 import sys
 from dataclasses import dataclass
 
-REQUIRED_ENV = ("TIGER_ID", "TIGER_ACCOUNT", "TIGER_PRIVATE_KEY_PATH")
+MANUAL_ENV = ("TIGER_ID", "TIGER_ACCOUNT", "TIGER_PRIVATE_KEY_PATH")
+
+SETUP_HINT = """\
+未找到凭证配置。两种方式任选其一：
+
+【方式一 · 推荐】用开发者中心下载的配置文件
+  1. 打开 https://developer.itigerup.com/profile
+  2. 点「生成密钥」，下载 tiger_openapi_config.properties
+  3. 放到某个目录，例如 ~/.tiger/
+  4. export TIGER_PROPS_PATH=~/.tiger
+
+【方式二】手动指定
+  export TIGER_ID=你的tiger_id
+  export TIGER_ACCOUNT=你的账户号
+  export TIGER_PRIVATE_KEY_PATH=~/.tiger/rsa_private_key.pem
+"""
 
 
 @dataclass
 class Credentials:
-    tiger_id: str
-    account: str
-    private_key_path: str
+    """props_path 与手动字段二选一。"""
+
+    props_path: str | None = None
+    tiger_id: str | None = None
+    account: str | None = None
+    private_key_path: str | None = None
+    license: str | None = None
 
 
 def load_credentials() -> Credentials:
-    missing = [name for name in REQUIRED_ENV if not os.environ.get(name)]
+    props_path = os.environ.get("TIGER_PROPS_PATH")
+    if props_path:
+        props_dir = os.path.expanduser(props_path)
+        if os.path.isfile(props_dir):
+            props_dir = os.path.dirname(props_dir)
+        if not os.path.isdir(props_dir):
+            raise SystemExit(f"TIGER_PROPS_PATH 不是有效目录: {props_dir}")
+        expected = os.path.join(props_dir, "tiger_openapi_config.properties")
+        if not os.path.isfile(expected):
+            raise SystemExit(f"目录里没有 tiger_openapi_config.properties: {props_dir}")
+        return Credentials(props_path=props_dir, account=os.environ.get("TIGER_ACCOUNT"))
+
+    missing = [name for name in MANUAL_ENV if not os.environ.get(name)]
     if missing:
-        raise SystemExit(
-            "缺少环境变量: "
-            + ", ".join(missing)
-            + "\n\n请先设置:\n"
-            + "  export TIGER_ID=your_tiger_id\n"
-            + "  export TIGER_ACCOUNT=your_account\n"
-            + "  export TIGER_PRIVATE_KEY_PATH=/path/to/rsa_private_key.pem\n"
-        )
+        raise SystemExit("缺少: " + ", ".join(missing) + "\n\n" + SETUP_HINT)
 
     key_path = os.path.expanduser(os.environ["TIGER_PRIVATE_KEY_PATH"])
     if not os.path.isfile(key_path):
@@ -53,6 +83,7 @@ def load_credentials() -> Credentials:
         tiger_id=os.environ["TIGER_ID"],
         account=os.environ["TIGER_ACCOUNT"],
         private_key_path=key_path,
+        license=os.environ.get("TIGER_LICENSE"),
     )
 
 
@@ -63,12 +94,17 @@ def build_clients(creds: Credentials):
     from tigeropen.tiger_open_config import TigerOpenClientConfig
     from tigeropen.trade.trade_client import TradeClient
 
-    config = TigerOpenClientConfig()
-    config.private_key = read_private_key(creds.private_key_path)
-    config.tiger_id = creds.tiger_id
-    config.account = creds.account
-    config.language = Language.zh_CN
+    if creds.props_path:
+        config = TigerOpenClientConfig(props_path=creds.props_path)
+    else:
+        config = TigerOpenClientConfig()
+        config.tiger_id = creds.tiger_id
+        config.account = creds.account
+        config.private_key = read_private_key(creds.private_key_path)
+        if creds.license:
+            config.license = creds.license
 
+    config.language = Language.zh_CN
     return QuoteClient(config), TradeClient(config)
 
 
@@ -244,7 +280,7 @@ def main(argv=None) -> int:
 
     if args.command == "positions":
         if args.account is None:
-            args.account = creds.account
+            args.account = creds.account  # None 时交由 SDK 用配置文件里的默认账户
         cmd_positions(trade_client, args)
     else:
         handler = {
