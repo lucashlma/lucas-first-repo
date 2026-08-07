@@ -58,7 +58,33 @@ openssl pkcs8 -topk8 -inform PEM -in private_pkcs1.pem -outform PEM -nocrypt -ou
 chmod 600 ~/.tiger/*.pem
 ```
 
-**第三步：验证**
+**第三步：抢占行情权限**
+
+订阅了行情**还不够**。老虎的行情权限同一时间只在**一个设备**上生效，默认被 APP 占着。要先把它抢到 API 这边：
+
+```bash
+python tiger_options.py permission   # 先看现在有什么权限
+python tiger_options.py grab         # 抢占到本设备
+```
+
+抢占后 APP 端的行情会失效；在 APP 里重新看行情又会把权限抢回去，那时 API 就又报 permission denied。**两边来回抢，同一时间只有一个能用。**
+
+`permission` 输出示例：
+
+```
+权限名                              到期时间
+--------------------------------------------------------
+usQuoteBasic                     2026-08-29 10:40:00
+usOptionQuote                    2026-08-29 10:40:00
+hkStockQuoteLv2                  长期有效
+
+  美股股票行情 (usQuoteBasic):  有
+  美股期权行情 (usOptionQuote): 有
+```
+
+拉美股报价需要 `usQuoteBasic`，拉期权链需要 `usOptionQuote`。
+
+**第四步：验证**
 
 ```bash
 python tiger_options.py quote SPCX
@@ -71,7 +97,8 @@ python tiger_options.py quote SPCX
 | `tigerId ... is illegal` | Tiger ID 填错，或有多余空格换行 |
 | `public key error` (code=1000) | tiger_id 没正确传到服务端 |
 | `Could not deserialize key data` | 私钥格式不对，转成 PKCS#8 |
-| 期权链返回空 | 没买 API 期权行情权限 |
+| `permission denied(... US market)` | 行情权限没抢到本设备，跑 `grab`；若 `permission` 显示无权限则是没订阅 |
+| 期权链返回空 | 缺 `usOptionQuote`，需单独订阅美股期权行情 |
 
 私钥只留本机，`.gitignore` 已排除 `*.pem` 和 `.env`。
 

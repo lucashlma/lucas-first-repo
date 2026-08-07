@@ -15,6 +15,8 @@
     TIGER_LICENSE           可选，如 TBSG / TBNZ
 
 用法：
+    python tiger_options.py permission          # 查看当前行情权限
+    python tiger_options.py grab                # 把行情权限抢占到本设备
     python tiger_options.py quote AAOI SPCX
     python tiger_options.py expirations AAOI
     python tiger_options.py chain AAOI --expiry 2026-08-21 --min-strike 120 --max-strike 180
@@ -28,6 +30,7 @@ import argparse
 import os
 import sys
 from dataclasses import dataclass
+from datetime import datetime
 
 MANUAL_ENV = ("TIGER_ID", "TIGER_ACCOUNT", "TIGER_PRIVATE_KEY_PATH")
 
@@ -126,6 +129,40 @@ def _row_value(row, *names):
         if name in row and row[name] is not None:
             return row[name]
     return None
+
+
+def _print_permissions(permissions) -> None:
+    if not permissions:
+        print("当前没有任何行情权限。")
+        return
+    print(f"{'权限名':<32} {'到期时间':<22}")
+    print("-" * 56)
+    for p in permissions:
+        name = p.get("name", "?")
+        expire = p.get("expire_at")
+        if expire == -1:
+            when = "长期有效"
+        elif expire:
+            when = datetime.fromtimestamp(expire / 1000).strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            when = "未知"
+        print(f"{name:<32} {when:<22}")
+
+    names = {p.get("name") for p in permissions}
+    print()
+    print(f"  美股股票行情 (usQuoteBasic):  {'有' if 'usQuoteBasic' in names else '无'}")
+    print(f"  美股期权行情 (usOptionQuote): {'有' if 'usOptionQuote' in names else '无'}")
+
+
+def cmd_permission(quote_client, args) -> None:
+    _print_permissions(quote_client.get_quote_permission())
+
+
+def cmd_grab(quote_client, args) -> None:
+    """行情权限同一时间只在一个设备上生效，抢占后 APP 端会失效。"""
+    print("正在把行情权限抢占到本设备……\n")
+    _print_permissions(quote_client.grab_quote_permission())
+    print("\n注意：APP 端的行情会因此失效，在 APP 里重新查看行情会把权限抢回去。")
 
 
 def cmd_quote(quote_client, args) -> None:
@@ -245,6 +282,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
+    sub.add_parser("permission", help="查看当前行情权限")
+    sub.add_parser("grab", help="把行情权限抢占到本设备")
+
     p_quote = sub.add_parser("quote", help="股票实时报价")
     p_quote.add_argument("symbols", nargs="+")
 
@@ -284,6 +324,8 @@ def main(argv=None) -> int:
         cmd_positions(trade_client, args)
     else:
         handler = {
+            "permission": cmd_permission,
+            "grab": cmd_grab,
             "quote": cmd_quote,
             "expirations": cmd_expirations,
             "chain": cmd_chain,

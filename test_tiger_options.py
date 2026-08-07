@@ -106,3 +106,58 @@ def test_one_sided_quote_falls_back():
 def test_empty_chain_raises():
     with pytest.raises(SystemExit, match="没有返回期权链数据"):
         tiger_options._fetch_chain(FakeQuoteClient(make_chain([])), "AAOI", "2026-08-21")
+
+
+class FakePermClient:
+    def __init__(self, perms):
+        self._perms = perms
+        self.grabbed = False
+
+    def get_quote_permission(self):
+        return self._perms
+
+    def grab_quote_permission(self):
+        self.grabbed = True
+        return self._perms
+
+
+PERMS = [
+    {"name": "usQuoteBasic", "expire_at": 1788000000000},
+    {"name": "usOptionQuote", "expire_at": 1788000000000},
+    {"name": "hkStockQuoteLv2", "expire_at": -1},
+]
+
+
+def test_permission_lists_us_stock_and_option(capsys):
+    tiger_options.cmd_permission(FakePermClient(PERMS), None)
+    out = capsys.readouterr().out
+    assert "usQuoteBasic" in out
+    assert "usOptionQuote" in out
+    assert "美股股票行情 (usQuoteBasic):  有" in out
+    assert "美股期权行情 (usOptionQuote): 有" in out
+
+
+def test_permission_reports_missing_option_entitlement(capsys):
+    tiger_options.cmd_permission(FakePermClient([PERMS[0]]), None)
+    out = capsys.readouterr().out
+    assert "美股股票行情 (usQuoteBasic):  有" in out
+    assert "美股期权行情 (usOptionQuote): 无" in out
+
+
+def test_permanent_entitlement_shown_as_long_lived(capsys):
+    tiger_options.cmd_permission(FakePermClient([PERMS[2]]), None)
+    assert "长期有效" in capsys.readouterr().out
+
+
+def test_empty_permission_list(capsys):
+    tiger_options.cmd_permission(FakePermClient([]), None)
+    assert "当前没有任何行情权限" in capsys.readouterr().out
+
+
+def test_grab_calls_sdk_and_warns_about_app(capsys):
+    client = FakePermClient(PERMS)
+    tiger_options.cmd_grab(client, None)
+    out = capsys.readouterr().out
+    assert client.grabbed is True
+    assert "抢占到本设备" in out
+    assert "APP 端的行情会因此失效" in out
