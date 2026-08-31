@@ -40,6 +40,12 @@ python tiger_options.py spread AAOI --expiry 2026-08-21 --long 133 --short 170 -
 # 卖出看跌价差用 --side PUT，--cost 填负数表示收权利金
 python tiger_options.py spread SPCX --expiry 2026-09-18 --long 90 --short 100 --side PUT --cost -3.1
 
+# AVGO 财报 debit call spread 实时估值
+python tiger_options.py spread AVGO --expiry 2026-09-18 --long 370 --short 420 --cost 13.35
+
+# 已记录仓位的到期结构（不连行情）
+python tiger_options.py journal
+
 # 当前持仓
 python tiger_options.py positions
 ```
@@ -54,3 +60,9 @@ python -m pytest test_tiger_options.py -v
 ```
 
 测试用假的期权链离线跑，不需要 API 凭证，也不会发出任何网络请求。
+
+## 交易日志
+
+当前开放仓位写在 `trades/open.json`。笔记：
+
+- [AVGO 期权 · 赌财报（370/420 debit call spread）](docs/avgo-earnings-call-spread.md)

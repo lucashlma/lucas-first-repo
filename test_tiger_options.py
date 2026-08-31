@@ -106,3 +106,45 @@ def test_one_sided_quote_falls_back():
 def test_empty_chain_raises():
     with pytest.raises(SystemExit, match="没有返回期权链数据"):
         tiger_options._fetch_chain(FakeQuoteClient(make_chain([])), "AAOI", "2026-08-21")
+
+
+def test_avgo_debit_call_spread_economics():
+    econ = tiger_options.spread_economics(370, 420, 13.35, qty=1)
+    assert econ.width == 50
+    assert econ.max_loss == 13.35
+    assert econ.max_loss_dollars == 1335
+    assert round(econ.max_profit, 2) == 36.65
+    assert econ.max_profit_dollars == 3665
+    assert round(econ.breakeven, 2) == 383.35
+    assert round(econ.max_profit / econ.max_loss, 2) == 2.75
+
+
+def test_avgo_spread_print_matches_economics(capsys):
+    chain = make_chain([
+        {"strike": 370.0, "put_call": "CALL", "bid_price": 28.0, "ask_price": 28.4},
+        {"strike": 420.0, "put_call": "CALL", "bid_price": 8.9, "ask_price": 9.3},
+    ])
+    out = run_spread(
+        capsys, chain,
+        symbol="AVGO", expiry="2026-09-18",
+        long=370.0, short=420.0, qty=1, cost=13.35,
+    )
+    assert "打平点          383.35" in out
+    assert "最大亏损        13.35   (共 $1,335)" in out
+    assert "最大盈利        36.65   (共 $3,665)" in out
+    # 中值 28.20 - 9.10 = 19.10；(19.10 - 13.35) * 100 = 575
+    assert "价差中值        19.10" in out
+    assert "$575" in out
+
+
+def test_journal_prints_avgo_card(capsys):
+    tiger_options.main(["journal"])
+    out = capsys.readouterr().out
+    assert "AVGO  2026-09-18" in out
+    assert "370/420 CALL" in out
+    assert "到期打平        383.35" in out
+    assert "$1,335" in out
+    assert "$3,665" in out
+    assert "仓位止损" in out
+    assert "420" in out
+
