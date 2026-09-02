@@ -176,6 +176,27 @@ def main(argv=None) -> int:
     sky.montage(faces, columns=3, title="重建结果的立方体六面：+Z 是天顶，-Z 是地面").save(faces_path)
     print(f"  {faces_path}")
 
+    print("\n=== 6. 多曝光括号合并（物理正确的那条路）===")
+    peak = float(sky.luminance(reference).max())
+    print(f"  真值峰值 {peak:,.0f}，也就是最暗那张的曝光得低于 -{math.log2(peak):.0f} EV 才拍得到日面")
+    truth_lum = sky.luminance(reference)
+    band = (truth_lum > 0.02) & (truth_lum < 100)
+    for evs in ([-8.0, -4.0, 0.0], [-16.0, -8.0, 0.0]):
+        captures = [
+            sky.srgb_to_linear(
+                np.round(np.clip(sky.linear_to_srgb(reference * (2.0**ev)), 0, 1) * 255) / 255
+            )
+            for ev in evs
+        ]
+        merged = sky.merge_exposures(captures, evs)
+        merged_lum = sky.luminance(merged)
+        error = np.abs(merged_lum[band] - truth_lum[band]) / truth_lum[band]
+        print(f"  EV {str(evs):<22} 峰值 {merged_lum.max():>10,.0f}"
+              f"  总能量 x{ambient(merged) / ambient(reference):<5.2f}"
+              f"  中间调相对误差 中位 {np.median(error) * 100:.2f}%"
+              f" / 95 分位 {np.percentile(error, 95) * 100:.2f}%")
+    print("  括号够暗时能量和峰值都能还原，只到 -8 EV 时日面照样削顶。")
+
     print("\n全部通过。")
     return 0
 

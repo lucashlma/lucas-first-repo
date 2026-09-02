@@ -269,6 +269,31 @@ def test_opencv_decodes_our_file_identically(tmp_path):
 # --------------------------------------------------------------------------
 # 传递函数
 # --------------------------------------------------------------------------
+def test_luminance_matches_a_direct_dot_product():
+    image = make_test_image(300, 71, seed=8)  # 行数跨过多个分块
+    assert np.allclose(sky.luminance(image), image @ sky.LUMA.astype(np.float32), atol=1e-6)
+
+
+def test_luminance_rejects_bad_shape():
+    with pytest.raises(ValueError):
+        sky.luminance(np.zeros((4, 4)))
+
+
+def test_sanitize_linear_cleans_in_place():
+    image = np.zeros((300, 4, 3), dtype=np.float32)
+    image[0] = [np.nan, -3.0, np.inf]
+    image[299] = [1.5, -0.0, 2.0]
+
+    returned = sky.sanitize_linear(image)
+
+    assert returned is image, "应该就地修改，不另开拷贝"
+    assert np.isfinite(image).all()
+    assert (image >= 0).all()
+    assert image[0, 0, 0] == 0.0 and image[0, 0, 1] == 0.0
+    assert image[0, 0, 2] > 1e30
+    assert image[299, 0].tolist() == [1.5, 0.0, 2.0]
+
+
 def test_srgb_transfer_known_points():
     assert sky.srgb_to_linear(np.array([0.0]))[0] == pytest.approx(0.0)
     assert sky.srgb_to_linear(np.array([1.0]))[0] == pytest.approx(1.0, abs=1e-6)
@@ -403,6 +428,72 @@ def test_mirrorball_radius_is_continuous_near_the_edge():
     assert np.all(np.diff(radii) > 0), "从球心到球边缘半径应单调增大"
     assert radii[0] == pytest.approx(0.0, abs=1e-9)
     assert radii[-1] == pytest.approx(1.0, abs=1e-9)
+
+
+def forward_project(projection: str, u: np.ndarray, v: np.ndarray) -> np.ndarray:
+    """测试里独立实现的正向映射：源图 uv -> 世界方向。
+
+    和 sky_to_hdr 里的反向映射是两套推导，用来交叉验证。
+    """
+    if projection == "equirect":
+        theta = v * math.pi
+        phi = (u - 0.5) * 2 * math.pi
+        return np.stack(
+            [np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)], axis=-1
+        )
+
+    if projection == "fisheye180":
+        px, py = 2 * u - 1, 1 - 2 * v
+        theta = np.hypot(px, py) * (math.pi / 2)
+        angle = np.arctan2(py, px)
+        return np.stack(
+            [np.sin(theta) * np.cos(angle), np.sin(theta) * np.sin(angle), np.cos(theta)], axis=-1
+        )
+
+    if projection == "mirrorball":
+        # 球面图坐标 (nx, ny) 就是朝向相机那一侧的法线的 xy；相机沿 +z_c 入射，
+        # 所以该点法线是 (nx, ny, -s)，反射方向 R = V - 2(V·n)n。
+        nx, ny = 2 * u - 1, 1 - 2 * v
+        s = np.sqrt(np.clip(1 - nx**2 - ny**2, 0.0, 1.0))
+        # 相机空间 (右, 上, 前) 对应世界 (+Y, +Z, +X)。
+        return np.stack([1 - 2 * s**2, 2 * s * nx, 2 * s * ny], axis=-1)
+
+    raise AssertionError(projection)
+
+
+@pytest.mark.parametrize("projection", ["equirect", "fisheye180", "mirrorball"])
+def test_projection_inverse_matches_an_independent_forward_map(projection):
+    # 躲开各投影的奇点：经纬图的极点、鱼眼的边缘、镜面球的边缘。
+    axis = np.linspace(0.18, 0.82, 17)
+    u, v = np.meshgrid(axis, axis)
+    dirs = forward_project(projection, u, v)
+
+    back_u, back_v, valid = sky.directions_to_source_uv(dirs, projection)
+
+    assert valid.all()
+    assert np.allclose(back_u, u, atol=1e-9)
+    assert np.allclose(back_v, v, atol=1e-9)
+
+
+def test_mirrorball_image_round_trips_back_to_equirect():
+    """把经纬图渲染成镜面球照片，再让工具还原，应该回到原样。"""
+    height, width = 64, 128
+    dirs = sky.equirect_directions(width, height)
+    pattern = (0.5 + 0.5 * dirs).astype(np.float32)  # 平滑的方向编码图案
+
+    size = 512
+    axis = (np.arange(size) + 0.5) / size * 2 - 1
+    ball_u, ball_v = np.meshgrid((axis + 1) / 2, (axis + 1) / 2)
+    ball_dirs = forward_project("mirrorball", ball_u, ball_v)
+    u, v, _ = sky.directions_to_source_uv(ball_dirs, "equirect")
+    ball = sky.sample_bilinear(pattern, u, v, wrap_x=True)
+
+    restored, valid = sky.reproject_to_equirect(ball, width, height, "mirrorball")
+
+    # 球边缘映射的是相机正前方（世界 +X），那里压缩到无穷、采样不可信，排除掉。
+    away_from_edge = (dirs @ np.array([1.0, 0.0, 0.0])) < math.cos(math.radians(40))
+    assert valid.all()
+    assert np.abs(restored - pattern)[away_from_edge].max() < 0.02
 
 
 def test_unknown_projection_raises():
@@ -610,6 +701,24 @@ def test_merge_exposures_beats_any_single_frame():
     for capture, ev in zip(captures, evs):
         single_error = np.abs(capture / (2.0**ev) - truth).mean()
         assert merged_error < single_error
+
+
+def test_merge_needs_a_dark_enough_frame_to_capture_the_sun():
+    """括号里最暗那张也要能装下日面，否则日面照样削顶。"""
+    height, width = 64, 128
+    dirs = sky.equirect_directions(width, height)
+    toward_sun = np.clip(dirs @ sky.azel_to_direction(0.0, 30.0), 0.0, 1.0)
+    truth = ((0.3 + 4000.0 * toward_sun**2000)[..., None] * np.ones(3)).astype(np.float32)
+
+    too_bright = [-6.0, -3.0, 0.0]  # 最暗一张只到 1/64，日面还是过曝
+    dark_enough = [-14.0, -7.0, 0.0]  # 最暗一张到 1/16384，装得下 4000
+
+    shallow = sky.merge_exposures([simulate_capture(truth, ev) for ev in too_bright], too_bright)
+    deep = sky.merge_exposures([simulate_capture(truth, ev) for ev in dark_enough], dark_enough)
+
+    truth_peak = float(sky.luminance(truth).max())
+    assert float(sky.luminance(shallow).max()) < truth_peak * 0.2
+    assert float(sky.luminance(deep).max()) == pytest.approx(truth_peak, rel=0.05)
 
 
 def test_merge_exposures_validates_inputs():

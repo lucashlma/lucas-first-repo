@@ -43,12 +43,27 @@ MIN_RADIANCE = 1e-32
 
 LUMA = np.array([0.2126, 0.7152, 0.0722], dtype=np.float64)
 
+# 4K/8K 全景图上，一次性铺开 float64 中间结果动辄上 G，所以按行块算。
+CHUNK_ROWS = 128
+
 PROJECTIONS = ("equirect", "skyonly", "fisheye180", "mirrorball")
 
 
 # --------------------------------------------------------------------------
 # Radiance RGBE 编解码
 # --------------------------------------------------------------------------
+def luminance(image: np.ndarray, chunk_rows: int = CHUNK_ROWS) -> np.ndarray:
+    """按行块算亮度，返回 float32。"""
+    image = np.asarray(image)
+    if image.ndim != 3 or image.shape[2] != 3:
+        raise ValueError(f"需要 (高, 宽, 3) 的图像，收到 {image.shape}")
+    out = np.empty(image.shape[:2], dtype=np.float32)
+    luma = LUMA.astype(np.float32)
+    for row0 in range(0, image.shape[0], chunk_rows):
+        out[row0 : row0 + chunk_rows] = image[row0 : row0 + chunk_rows] @ luma
+    return out
+
+
 def float_to_rgbe(rgb: np.ndarray) -> np.ndarray:
     """线性 float RGB -> 打包的 RGBE 字节，(..., 3) -> (..., 4)。"""
     rgb = np.asarray(rgb, dtype=np.float64)
@@ -342,8 +357,10 @@ def check_hdr_for_ue(path: str) -> CheckResult:
     if result.width > 8192:
         result.warnings.append(f"宽度 {result.width} 偏大，UE 导入会很慢且占显存，一般 4096 够用")
 
-    rgb = rgbe_to_float(rgbe)
-    lum = rgb.astype(np.float64) @ LUMA
+    # 分块解码算亮度，避免为了统计再铺开一整幅浮点图。
+    lum = np.empty(rgbe.shape[:2], dtype=np.float32)
+    for row0 in range(0, rgbe.shape[0], CHUNK_ROWS):
+        lum[row0 : row0 + CHUNK_ROWS] = luminance(rgbe_to_float(rgbe[row0 : row0 + CHUNK_ROWS]))
     positive = lum[lum > 0]
     result.stats = {
         "文件大小MB": info["file_size"] / (1024 * 1024),
@@ -367,6 +384,25 @@ def check_hdr_for_ue(path: str) -> CheckResult:
 # --------------------------------------------------------------------------
 # 输入输出：LDR 读入 / 传递函数
 # --------------------------------------------------------------------------
+def map_rows(image: np.ndarray, fn, dtype=np.float32) -> np.ndarray:
+    """按行块套用逐像素函数，把中间结果的峰值内存压到一块的量级。"""
+    image = np.asarray(image)
+    out = np.empty(image.shape, dtype=dtype)
+    for row0 in range(0, image.shape[0], CHUNK_ROWS):
+        out[row0 : row0 + CHUNK_ROWS] = fn(image[row0 : row0 + CHUNK_ROWS])
+    return out
+
+
+def sanitize_linear(image: np.ndarray) -> np.ndarray:
+    """就地把 NaN/Inf/负值清掉。大图上另开两份拷贝要多吃几百 MB。"""
+    largest = float(np.finfo(np.float32).max)
+    for row0 in range(0, image.shape[0], CHUNK_ROWS):
+        block = image[row0 : row0 + CHUNK_ROWS]
+        np.nan_to_num(block, copy=False, nan=0.0, posinf=largest, neginf=0.0)
+        np.clip(block, 0.0, None, out=block)
+    return image
+
+
 def srgb_to_linear(x: np.ndarray) -> np.ndarray:
     x = np.asarray(x, dtype=np.float32)
     return np.where(x <= 0.04045, x / 12.92, ((x + 0.055) / 1.055) ** 2.4).astype(np.float32)
@@ -387,17 +423,18 @@ def load_image_linear(path: str, gamma: str = "srgb") -> np.ndarray:
     with Image.open(path) as img:
         img.load()
         if img.mode in ("I;16", "I;16B", "I;16L", "I"):
-            arr = np.asarray(img).astype(np.float32) / 65535.0
-            arr = np.repeat(arr[:, :, None], 3, axis=2)
+            raw = np.repeat(np.asarray(img)[:, :, None], 3, axis=2)
+            full_scale = 65535.0
         else:
-            arr = np.asarray(img.convert("RGB")).astype(np.float32) / 255.0
+            raw = np.asarray(img.convert("RGB"))
+            full_scale = 255.0
 
     if gamma == "srgb":
-        return srgb_to_linear(arr)
+        return map_rows(raw, lambda block: srgb_to_linear(block / full_scale))
     value = float(gamma)
     if value <= 0:
         raise ValueError("--gamma 必须为正数或 srgb")
-    return np.power(arr, value, dtype=np.float32)
+    return map_rows(raw, lambda block: np.power(block / full_scale, value, dtype=np.float64))
 
 
 def save_png(path: str, rgb_srgb: np.ndarray) -> None:
@@ -575,10 +612,13 @@ def expand_highlights(linear: np.ndarray, knee: float = 0.85, peak: float = 16.0
         raise ValueError("--expand-power 必须为正")
 
     linear = np.asarray(linear, dtype=np.float32)
-    lum = linear.astype(np.float64) @ LUMA
-    t = np.clip((lum - knee) / (1.0 - knee), 0.0, 1.0)
-    gain = 1.0 + (peak - 1.0) * np.power(t, power)
-    return (linear * gain[..., None].astype(np.float32)).astype(np.float32)
+    out = np.empty_like(linear)
+    for row0 in range(0, linear.shape[0], CHUNK_ROWS):
+        block = linear[row0 : row0 + CHUNK_ROWS]
+        t = np.clip((luminance(block) - knee) / (1.0 - knee), 0.0, 1.0)
+        gain = 1.0 + (peak - 1.0) * np.power(t, power, dtype=np.float32)
+        out[row0 : row0 + CHUNK_ROWS] = block * gain[..., None]
+    return out
 
 
 def _brightest_pixel_directions(equirect_linear: np.ndarray, plateau: float,
@@ -591,7 +631,7 @@ def _brightest_pixel_directions(equirect_linear: np.ndarray, plateau: float,
     削顶时日面周围那圈光晕就是最大的一块平顶。
     """
     height, width = equirect_linear.shape[:2]
-    lum = equirect_linear.astype(np.float64) @ LUMA
+    lum = luminance(equirect_linear)
     if lum.max() <= 0:
         return None, None
 
@@ -608,7 +648,7 @@ def _brightest_pixel_directions(equirect_linear: np.ndarray, plateau: float,
         [np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)], axis=-1
     )
     # 立体角权重，避免极区那些挤在一起的像素被当成密集团块。
-    return dirs, np.sin(theta) * lum[rows, cols]
+    return dirs, np.sin(theta) * lum[rows, cols].astype(np.float64)
 
 
 def detect_sun(equirect_linear: np.ndarray, kernel_deg: float = 8.0, plateau: float = 0.98,
@@ -680,12 +720,14 @@ def add_sun(equirect_linear: np.ndarray, azimuth_deg: float, elevation_deg: floa
 
 def solid_angle_weighted_mean(equirect: np.ndarray) -> np.ndarray:
     """按立体角加权的平均颜色，等于 SkyLight 拿到的整体环境光强度。"""
-    height = equirect.shape[0]
+    height, width = equirect.shape[:2]
     theta = (np.arange(height) + 0.5) / height * np.pi
-    weight = np.sin(theta)[:, None, None]
-    return (equirect.astype(np.float64) * weight).sum(axis=(0, 1)) / (
-        weight.sum() * equirect.shape[1]
-    )
+    weight = np.sin(theta)
+    total = np.zeros(3, dtype=np.float64)
+    for row0 in range(0, height, CHUNK_ROWS):
+        block = equirect[row0 : row0 + CHUNK_ROWS].astype(np.float64)
+        total += (block * weight[row0 : row0 + CHUNK_ROWS, None, None]).sum(axis=(0, 1))
+    return total / (weight.sum() * width)
 
 
 # --------------------------------------------------------------------------
@@ -705,17 +747,22 @@ def merge_exposures(images_linear: list[np.ndarray], evs: list[float]) -> np.nda
         if img.shape != shape:
             raise ValueError("多曝光合并要求所有输入尺寸一致")
 
-    numerator = np.zeros(shape, dtype=np.float64)
-    denominator = np.zeros(shape[:2] + (1,), dtype=np.float64)
-    for img, ev in zip(images_linear, evs):
-        display = np.clip(linear_to_srgb(img).astype(np.float64) @ LUMA, 0.0, 1.0)
-        weight = np.exp(-((display - 0.5) ** 2) / (2 * 0.16**2))
-        weight = np.where(display > 0.98, weight * 1e-3, weight)
-        weight = np.where(display < 0.01, weight * 1e-3, weight)
-        weight = np.maximum(weight, 1e-9)[..., None]
-        numerator += weight * img.astype(np.float64) / (2.0**ev)
-        denominator += weight
-    return (numerator / denominator).astype(np.float32)
+    out = np.empty(shape, dtype=np.float32)
+    for row0 in range(0, shape[0], CHUNK_ROWS):
+        rows = slice(row0, row0 + CHUNK_ROWS)
+        numerator = np.zeros(images_linear[0][rows].shape, dtype=np.float64)
+        denominator = np.zeros(numerator.shape[:2] + (1,), dtype=np.float64)
+        for img, ev in zip(images_linear, evs):
+            block = img[rows]
+            display = np.clip(luminance(linear_to_srgb(block)), 0.0, 1.0).astype(np.float64)
+            weight = np.exp(-((display - 0.5) ** 2) / (2 * 0.16**2))
+            weight = np.where(display > 0.98, weight * 1e-3, weight)
+            weight = np.where(display < 0.01, weight * 1e-3, weight)
+            weight = np.maximum(weight, 1e-9)[..., None]
+            numerator += weight * block.astype(np.float64) / (2.0**ev)
+            denominator += weight
+        out[rows] = numerator / denominator
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -723,10 +770,14 @@ def merge_exposures(images_linear: list[np.ndarray], evs: list[float]) -> np.nda
 # --------------------------------------------------------------------------
 def tonemap_aces(linear: np.ndarray, ev: float = 0.0) -> np.ndarray:
     """Narkowicz 的 ACES 近似曲线 + sRGB 编码，只用来出预览图。"""
-    x = np.asarray(linear, dtype=np.float32) * np.float32(2.0**ev)
-    x = np.clip(x, 0.0, None)
-    mapped = (x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14)
-    return linear_to_srgb(np.clip(mapped, 0.0, 1.0))
+    scale = np.float32(2.0**ev)
+
+    def curve(block: np.ndarray) -> np.ndarray:
+        x = np.clip(np.asarray(block, dtype=np.float32) * scale, 0.0, None)
+        mapped = (x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14)
+        return linear_to_srgb(np.clip(mapped, 0.0, 1.0))
+
+    return map_rows(linear, curve)
 
 
 CUBE_FACES = {
@@ -947,10 +998,10 @@ def _build_hdr(args, source_linear: np.ndarray) -> tuple[np.ndarray, tuple[float
         print(f"  源图只覆盖了球面的 {covered:.1f}%，其余用地面色补（albedo {args.ground_albedo:g}）")
         equirect = fill_ground(equirect, valid, args.ground_albedo, args.ground_blend)
 
-    before_peak = float((equirect.astype(np.float64) @ LUMA).max())
+    before_peak = float(luminance(equirect).max())
     if args.expand != "none":
         equirect = expand_highlights(equirect, args.knee, args.peak, args.expand_power)
-        after_peak = float((equirect.astype(np.float64) @ LUMA).max())
+        after_peak = float(luminance(equirect).max())
         print(f"  高光扩展 knee={args.knee:g} peak={args.peak:g} power={args.expand_power:g}："
               f"峰值亮度 {before_peak:.3g} -> {after_peak:.3g}")
 
@@ -971,7 +1022,7 @@ def _build_hdr(args, source_linear: np.ndarray) -> tuple[np.ndarray, tuple[float
         equirect = (equirect * np.float32(2.0**args.output_ev)).astype(np.float32)
         print(f"  整体曝光 {args.output_ev:+g} 档")
 
-    return np.clip(np.nan_to_num(equirect, nan=0.0), 0.0, None), sun
+    return sanitize_linear(equirect), sun
 
 
 def directional_light_rotation(azimuth_deg: float, elevation_deg: float) -> tuple[float, float]:
@@ -998,6 +1049,8 @@ def _finish(args, built: tuple[np.ndarray, tuple[float, float] | None]) -> int:
     print(f"  配套平行光旋转: Pitch {pitch:.1f}  Yaw {yaw:.1f}"
           "（全景图在 UE 里转了多少度，这里的 Yaw 就跟着加多少）")
 
+    # 校验要把文件整个读回来，先把内存里的图放掉，8K 时能省几百 MB。
+    del equirect, built
     result = check_hdr_for_ue(args.out)
     _print_check(result)
     return 0 if result.ok else 1
@@ -1021,7 +1074,7 @@ def cmd_merge(args) -> int:
         print(f"读入 {path}  (EV {ev:+g})")
         images.append(load_image_linear(path, args.gamma))
     merged = merge_exposures(images, args.ev)
-    lum = merged.astype(np.float64) @ LUMA
+    lum = luminance(merged)
     print(f"  合并完成：峰值亮度 {lum.max():.4g}，最暗有效亮度 {np.percentile(lum[lum > 0], 1):.4g}")
     return _finish(args, _build_hdr(args, merged))
 
