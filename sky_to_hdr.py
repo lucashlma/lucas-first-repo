@@ -467,15 +467,15 @@ def directions_to_source_uv(dirs: np.ndarray, projection: str,
         return u, v, radius <= 1.0
 
     if projection == "mirrorball":
-        # 相机看向世界 +X，相机空间 (右, 上, 前) = (+Y, +Z, +X)。
-        # 反射方向 R 对应的球面法线 n = normalize(V - R)，V = (0,0,1)。
+        # 相机看向世界 +X，相机空间 (右, 上, 前) = (+Y, +Z, +X)，入射方向 V = (0, 0, 1)。
+        # 反射到 R 的那个点，朝向相机的法线是 n = normalize(R - V)，
+        # 球面图坐标就取 (n_x, n_y)；代入 |R - V| = sqrt(2(1 - Rz)) 化简后
+        # 半径正好是 sqrt((1 + Rz) / 2)：球心映射到相机背后，球边缘是相机正前方。
         rx, ry, rz = y, z, x
-        nx, ny, nz = -rx, -ry, 1.0 - rz
-        norm = np.sqrt(nx * nx + ny * ny + nz * nz)
-        norm = np.where(norm < 1e-8, 1e-8, norm)
-        nx, ny = nx / norm, ny / norm
-        u = 0.5 + 0.5 * nx
-        v = 0.5 - 0.5 * ny
+        radius = np.sqrt(np.clip((1.0 + rz) * 0.5, 0.0, 1.0))
+        angle = np.arctan2(ry, rx)
+        u = 0.5 + 0.5 * radius * np.cos(angle)
+        v = 0.5 - 0.5 * radius * np.sin(angle)
         return u, v, np.ones(u.shape, dtype=bool)
 
     raise ValueError(f"未知的投影方式: {projection}")
