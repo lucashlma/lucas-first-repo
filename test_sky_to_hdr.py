@@ -526,6 +526,16 @@ def test_detect_sun_ignores_a_bright_horizon_band():
     assert elevation == pytest.approx(55.0, abs=2.0)
 
 
+def test_directional_light_rotation_points_away_from_the_sun():
+    pitch, yaw = sky.directional_light_rotation(35.0, 25.0)
+    assert pitch == pytest.approx(-25.0)
+    assert yaw == pytest.approx(-145.0)  # 35 + 180 折回 [-180, 180)
+
+    # 平行光朝向应该正好是太阳方向的反向。
+    light_dir = sky.azel_to_direction(yaw, pitch)
+    assert light_dir == pytest.approx(-sky.azel_to_direction(35.0, 25.0), abs=1e-12)
+
+
 def test_detect_sun_on_flat_image_does_not_crash():
     azimuth, elevation = sky.detect_sun(np.zeros((32, 64, 3), dtype=np.float32))
     assert math.isfinite(azimuth) and math.isfinite(elevation)

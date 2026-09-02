@@ -957,12 +957,28 @@ def _build_hdr(args, source_linear: np.ndarray) -> np.ndarray:
     return np.clip(np.nan_to_num(equirect, nan=0.0), 0.0, None)
 
 
+def directional_light_rotation(azimuth_deg: float, elevation_deg: float) -> tuple[float, float]:
+    """太阳方向 -> UE 平行光的 (Pitch, Yaw)。
+
+    平行光的朝向是光线传播方向，也就是太阳方向的反向：方位角转 180 度、仰角取负。
+    """
+    yaw = (azimuth_deg + 180.0 + 180.0) % 360.0 - 180.0
+    return -elevation_deg, yaw
+
+
 def _finish(args, equirect: np.ndarray) -> int:
     write_hdr(args.out, equirect, rle=not args.no_rle, comment=args.comment)
-    ambient = solid_angle_weighted_mean(equirect)
     print(f"  已写出 {args.out}")
-    print(f"  立体角加权平均色（SkyLight 环境光强度）: "
+
+    ambient = solid_angle_weighted_mean(equirect)
+    print(f"  立体角加权平均色（SkyLight 拿到的环境光）: "
           f"R {ambient[0]:.4g}  G {ambient[1]:.4g}  B {ambient[2]:.4g}")
+
+    azimuth, elevation = detect_sun(equirect)
+    pitch, yaw = directional_light_rotation(azimuth, elevation)
+    print(f"  最亮方向: 方位角 {azimuth:.1f} 度，仰角 {elevation:.1f} 度")
+    print(f"  配套平行光旋转: Pitch {pitch:.1f}  Yaw {yaw:.1f}"
+          "（全景图在 UE 里转了多少度，这里的 Yaw 就跟着加多少）")
 
     result = check_hdr_for_ue(args.out)
     _print_check(result)

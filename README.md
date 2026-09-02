@@ -1,5 +1,64 @@
 # lucas-first-repo
 
+## sky_to_hdr.py
+
+把自定义天空图转成 Radiance HDR（`.hdr`），用于 UE 的 SkyLight / HDRI Backdrop。
+
+UE 的贴图导入器只把 Radiance `.hdr` 当经纬展开的立方体贴图处理，导入后直接是
+`TextureCube`；`.exr` 会变成 `Texture2D`，塞不进 SkyLight 的 Cubemap 槽。
+所以这个脚本严格按 UE 的解析要求写文件：`#?RADIANCE` 头、`FORMAT=32-bit_rle_rgbe`、
+`-Y 高 +X 宽` 分辨率行、每一行都是新版 RLE 扫描线。
+
+### 安装
+
+```bash
+pip install numpy Pillow
+```
+
+### 用法
+
+```bash
+# 生成一张程序化天空，用来试跑
+python sky_to_hdr.py demo --out sky.png
+
+# 单张 2:1 经纬全景图 -> .hdr，顺手补一个太阳盘
+python sky_to_hdr.py convert sky.png --out sky.hdr --sun auto --sun-intensity 6000
+
+# 只有天空的环带 / 朝天顶的鱼眼 / 镜面球照片
+python sky_to_hdr.py convert band.jpg --projection skyonly --sky-fov 75 --out sky.hdr
+python sky_to_hdr.py convert dome.jpg --projection fisheye180 --out sky.hdr
+python sky_to_hdr.py convert ball.jpg --projection mirrorball --out sky.hdr
+
+# 曝光括号合并，物理上最正确的做法
+python sky_to_hdr.py merge under.jpg mid.jpg over.jpg --ev -2 0 2 --out sky.hdr
+
+# 校验能否被 UE 导入（convert / merge 末尾会自动跑一次）
+python sky_to_hdr.py check sky.hdr
+
+# 出预览：曝光扫描 + 立方体六面（核对朝向）
+python sky_to_hdr.py preview sky.hdr --out-dir previews --sweep 0 -3 -6 -9 --montage --cube-faces
+```
+
+`convert` 会输出峰值亮度、动态范围档数、立体角加权平均色（≈ SkyLight 的环境光量级），
+以及和全景图里太阳对齐的平行光 Pitch / Yaw。
+
+单张 8 bit 图里被削顶的信息是真丢了，脚本做的是平滑重建 + 可选的太阳盘注入，
+高光的**相对量级由参数指定**；要物理正确就用 `merge` 做曝光括号。
+
+完整的参数说明、UE 导入步骤、朝向对不上时怎么调、常见问题排查都在
+[docs/sky_to_hdr_ue.md](docs/sky_to_hdr_ue.md)。
+
+### 测试
+
+```bash
+pip install pytest opencv-python-headless
+python -m pytest test_sky_to_hdr.py -v
+```
+
+测试全程离线，不需要 UE。其中一条用例拿 OpenCV 的 Radiance 解码器和本工具的
+解码器逐位比对，确认输出文件对第三方标准解码器合法；装了 OpenCV 才会跑这条，
+没装就自动跳过。
+
 ## tiger_options.py
 
 老虎证券 OpenAPI 的只读行情工具，用来拉实时报价、期权链，并给垂直价差做估值。
