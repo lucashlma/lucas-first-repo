@@ -481,7 +481,7 @@ def test_add_sun_lands_in_the_requested_direction():
                       radius_deg=3.0, intensity=1000.0, color=(1.0, 1.0, 1.0))
 
     # 日面中心是平顶的，所以用亮度重心而不是 argmax 来定位。
-    azimuth, elevation = sky.detect_sun(out, top_fraction=0.01)
+    azimuth, elevation = sky.detect_sun(out)
     assert azimuth == pytest.approx(-70.0, abs=0.5)
     assert elevation == pytest.approx(40.0, abs=0.5)
     assert (out @ sky.LUMA).max() == pytest.approx(1000.0, rel=0.01)
@@ -520,10 +520,45 @@ def test_detect_sun_finds_a_compact_disc():
 
 def test_detect_sun_ignores_a_bright_horizon_band():
     image = make_disc_sky(azimuth=120.0, elevation=55.0, radius_deg=2.0)
-    image[126:130] = 1.0  # 地平线附近同样削顶的亮带
+    image[120:136] = 0.95  # 一条很亮但没到削顶的地平线亮带
     azimuth, elevation = sky.detect_sun(image)
     assert azimuth == pytest.approx(120.0, abs=2.0)
     assert elevation == pytest.approx(55.0, abs=2.0)
+
+
+def test_detect_sun_finds_the_centre_of_a_clipped_halo():
+    """真实 8 bit 天空照片里日面周围是一大片削顶的光晕，要找到它的中心。"""
+    height, width = 256, 512
+    dirs = sky.equirect_directions(width, height)
+    toward_sun = np.clip(dirs @ sky.azel_to_direction(-40.0, 30.0), 0.0, 1.0)
+    image = np.clip(0.25 + 6.0 * toward_sun**60, 0.0, 1.0).astype(np.float32)
+    image = np.repeat(image[..., None], 3, axis=2)
+    image[120:136] = 0.9  # 同时来一条很亮的地平线带干扰
+
+    assert (image.max(axis=2) >= 1.0).mean() > 0.002, "先确认真的存在一片削顶区"
+
+    azimuth, elevation = sky.detect_sun(image)
+    assert azimuth == pytest.approx(-40.0, abs=2.0)
+    assert elevation == pytest.approx(30.0, abs=2.0)
+
+
+def test_sun_disc_restores_energy_lost_to_clipping():
+    """8 bit 图削掉的能量主要是日面那一块，注入太阳盘应该把它补回来。"""
+    height, width = 256, 512
+    dirs = sky.equirect_directions(width, height)
+    toward_sun = np.clip(dirs @ sky.azel_to_direction(20.0, 35.0), 0.0, 1.0)
+    truth = (0.3 + 3000.0 * toward_sun**8000)[..., None] * np.ones(3, dtype=np.float32)
+    truth = truth.astype(np.float32)
+
+    photo = np.clip(truth, 0.0, 1.0)  # 拍成 8 bit：日面被削平到 1.0
+    azimuth, elevation = sky.detect_sun(photo)
+    rebuilt = sky.add_sun(sky.expand_highlights(photo), azimuth, elevation)
+
+    energy = lambda image: float(sky.solid_angle_weighted_mean(image) @ sky.LUMA)
+    truth_energy = energy(truth)
+    assert energy(photo) / truth_energy < 0.7, "先确认削顶确实丢掉了大部分能量"
+    assert 0.7 < energy(rebuilt) / truth_energy < 1.4
+    assert abs(energy(rebuilt) - truth_energy) < abs(energy(photo) - truth_energy)
 
 
 def test_directional_light_rotation_points_away_from_the_sun():

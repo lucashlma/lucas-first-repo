@@ -43,7 +43,10 @@ python sky_to_hdr.py preview sky.hdr --out-dir previews --sweep 0 -3 -6 -9 --mon
 以及和全景图里太阳对齐的平行光 Pitch / Yaw。
 
 单张 8 bit 图里被削顶的信息是真丢了，脚本做的是平滑重建 + 可选的太阳盘注入，
-高光的**相对量级由参数指定**；要物理正确就用 `merge` 做曝光括号。
+高光的**相对量级由参数指定**；要物理正确就用 `merge` 做曝光括号。拿 4 张真实
+HDRI 当基准真值实测过：晴天天空里日面占总能量的 60~78%，8 bit 一削顶就丢掉这么多，
+而把能量补回来主要靠太阳盘而不是高光扩展。默认参数按这组真值标定，
+总能量还原到真值的 0.78~1.30 倍。
 
 完整的参数说明、UE 导入步骤、朝向对不上时怎么调、常见问题排查都在
 [docs/sky_to_hdr_ue.md](docs/sky_to_hdr_ue.md)。
@@ -58,6 +61,15 @@ python -m pytest test_sky_to_hdr.py -v
 测试全程离线，不需要 UE。其中一条用例拿 OpenCV 的 Radiance 解码器和本工具的
 解码器逐位比对，确认输出文件对第三方标准解码器合法；装了 OpenCV 才会跑这条，
 没装就自动跳过。
+
+`validate_against_real_hdri.py` 是另一层验证：拿一张真实 HDRI 当基准真值，
+把它压成 8 bit 再重建，定量对比能量还原和太阳定位。它需要外部素材，
+所以不在离线测试套件里：
+
+```bash
+curl -O https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kloofendal_43d_clear_1k.hdr
+python validate_against_real_hdri.py kloofendal_43d_clear_1k.hdr --out-dir out
+```
 
 ## tiger_options.py
 
