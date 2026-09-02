@@ -757,7 +757,7 @@ def test_resolve_output_size_rejects_zero():
 # --------------------------------------------------------------------------
 def run_cli(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, "sky_to_hdr.py", *args], capture_output=True, text=True
+        [sys.executable, "sky_to_hdr.py", *args], capture_output=True, text=True, check=False
     )
 
 

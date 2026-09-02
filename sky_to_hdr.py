@@ -13,7 +13,7 @@
 用法：
     python sky_to_hdr.py demo --out sky.png
     python sky_to_hdr.py convert sky.png --out sky.hdr
-    python sky_to_hdr.py convert sky.png --out sky.hdr --sun auto --sun-intensity 4000
+    python sky_to_hdr.py convert sky.png --out sky.hdr --sun auto
     python sky_to_hdr.py convert dome.jpg --projection fisheye180 --out sky.hdr
     python sky_to_hdr.py merge under.jpg mid.jpg over.jpg --ev -2 0 2 --out sky.hdr
     python sky_to_hdr.py check sky.hdr
@@ -50,7 +50,7 @@ PROJECTIONS = ("equirect", "skyonly", "fisheye180", "mirrorball")
 
 
 # --------------------------------------------------------------------------
-# Radiance RGBE 编解码
+# 分块处理的公用件
 # --------------------------------------------------------------------------
 def luminance(image: np.ndarray, chunk_rows: int = CHUNK_ROWS) -> np.ndarray:
     """按行块算亮度，返回 float32。"""
@@ -64,6 +64,28 @@ def luminance(image: np.ndarray, chunk_rows: int = CHUNK_ROWS) -> np.ndarray:
     return out
 
 
+def map_rows(image: np.ndarray, fn, dtype=np.float32) -> np.ndarray:
+    """按行块套用逐像素函数，把中间结果的峰值内存压到一块的量级。"""
+    image = np.asarray(image)
+    out = np.empty(image.shape, dtype=dtype)
+    for row0 in range(0, image.shape[0], CHUNK_ROWS):
+        out[row0 : row0 + CHUNK_ROWS] = fn(image[row0 : row0 + CHUNK_ROWS])
+    return out
+
+
+def sanitize_linear(image: np.ndarray) -> np.ndarray:
+    """就地把 NaN/Inf/负值清掉。大图上另开两份拷贝要多吃几百 MB。"""
+    largest = float(np.finfo(np.float32).max)
+    for row0 in range(0, image.shape[0], CHUNK_ROWS):
+        block = image[row0 : row0 + CHUNK_ROWS]
+        np.nan_to_num(block, copy=False, nan=0.0, posinf=largest, neginf=0.0)
+        np.clip(block, 0.0, None, out=block)
+    return image
+
+
+# --------------------------------------------------------------------------
+# Radiance RGBE 编解码
+# --------------------------------------------------------------------------
 def float_to_rgbe(rgb: np.ndarray) -> np.ndarray:
     """线性 float RGB -> 打包的 RGBE 字节，(..., 3) -> (..., 4)。"""
     rgb = np.asarray(rgb, dtype=np.float64)
@@ -186,8 +208,7 @@ def write_hdr(path: str, rgb: np.ndarray, rle: bool = True, comment: str | None 
         for row0 in range(0, height, 64):
             block = float_to_rgbe(rgb[row0 : row0 + 64])
             if use_rle:
-                for row in block:
-                    fh.write(bytes(_encode_scanline(row)))
+                fh.writelines(bytes(_encode_scanline(row)) for row in block)
             else:
                 fh.write(np.ascontiguousarray(block).tobytes())
 
@@ -324,7 +345,7 @@ def check_hdr_for_ue(path: str) -> CheckResult:
     result = CheckResult(path=path)
     try:
         rgbe, info = _read_rgbe(path)
-    except Exception as exc:  # 解析失败对 UE 来说就是导入失败
+    except Exception as exc:  # noqa: BLE001 - 不管什么原因解析不了，对 UE 都是导入失败
         result.errors.append(str(exc))
         return result
 
@@ -384,25 +405,6 @@ def check_hdr_for_ue(path: str) -> CheckResult:
 # --------------------------------------------------------------------------
 # 输入输出：LDR 读入 / 传递函数
 # --------------------------------------------------------------------------
-def map_rows(image: np.ndarray, fn, dtype=np.float32) -> np.ndarray:
-    """按行块套用逐像素函数，把中间结果的峰值内存压到一块的量级。"""
-    image = np.asarray(image)
-    out = np.empty(image.shape, dtype=dtype)
-    for row0 in range(0, image.shape[0], CHUNK_ROWS):
-        out[row0 : row0 + CHUNK_ROWS] = fn(image[row0 : row0 + CHUNK_ROWS])
-    return out
-
-
-def sanitize_linear(image: np.ndarray) -> np.ndarray:
-    """就地把 NaN/Inf/负值清掉。大图上另开两份拷贝要多吃几百 MB。"""
-    largest = float(np.finfo(np.float32).max)
-    for row0 in range(0, image.shape[0], CHUNK_ROWS):
-        block = image[row0 : row0 + CHUNK_ROWS]
-        np.nan_to_num(block, copy=False, nan=0.0, posinf=largest, neginf=0.0)
-        np.clip(block, 0.0, None, out=block)
-    return image
-
-
 def srgb_to_linear(x: np.ndarray) -> np.ndarray:
     x = np.asarray(x, dtype=np.float32)
     return np.where(x <= 0.04045, x / 12.92, ((x + 0.055) / 1.055) ** 2.4).astype(np.float32)
@@ -587,7 +589,7 @@ def fill_ground(img: np.ndarray, valid: np.ndarray, albedo: float = 0.25,
     horizon_color = edge_rows.reshape(-1, img.shape[1], 3).mean(axis=0)
     ground_color = horizon_color.mean(axis=0) * albedo
 
-    blend_rows = max(1, int(round(blend_deg / 180.0 * height)))
+    blend_rows = max(1, round(blend_deg / 180.0 * height))
     for row in range(horizon, height):
         weight = min(1.0, (row - horizon + 1) / blend_rows)
         out[row] = horizon_color * (1.0 - weight) + ground_color * weight
@@ -939,7 +941,7 @@ def make_demo_sky(width: int = 2048, height: int = 1024, seed: int = 7,
 # --------------------------------------------------------------------------
 def nearest_pot(value: int, low: int = 512, high: int = 8192) -> int:
     value = int(min(max(value, low), high))
-    return 1 << int(round(math.log2(value)))
+    return 1 << round(math.log2(value))
 
 
 def resolve_output_size(src_shape, projection: str, size: str | None, pot: bool) -> tuple[int, int]:

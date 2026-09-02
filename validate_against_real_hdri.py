@@ -32,20 +32,24 @@ import sky_to_hdr as sky
 EV_SWEEP = (0.0, -4.0, -8.0, -12.0)
 
 
+def ambient(image: np.ndarray) -> float:
+    """立体角加权的平均亮度，也就是 SkyLight 会拿到的总能量。"""
+    return float(sky.solid_angle_weighted_mean(image) @ sky.LUMA)
+
+
 def angular_error(a: tuple[float, float], b: tuple[float, float]) -> float:
     dot = float(np.dot(sky.azel_to_direction(*a), sky.azel_to_direction(*b)))
     return math.degrees(math.acos(max(-1.0, min(1.0, dot))))
 
 
 def describe(name: str, image: np.ndarray) -> dict:
-    lum = image.astype(np.float64) @ sky.LUMA
+    lum = sky.luminance(image)
     positive = lum[lum > 0]
-    ambient = sky.solid_angle_weighted_mean(image)
     return {
         "名称": name,
         "峰值亮度": float(lum.max()),
         "动态范围档数": float(np.log2(lum.max() / np.percentile(positive, 5))),
-        "环境光亮度": float(ambient @ sky.LUMA),
+        "环境光亮度": ambient(image),
         "太阳方向": sky.detect_sun(image),
     }
 
@@ -191,7 +195,7 @@ def main(argv=None) -> int:
         merged = sky.merge_exposures(captures, evs)
         merged_lum = sky.luminance(merged)
         error = np.abs(merged_lum[band] - truth_lum[band]) / truth_lum[band]
-        print(f"  EV {str(evs):<22} 峰值 {merged_lum.max():>10,.0f}"
+        print(f"  EV {evs!s:<22} 峰值 {merged_lum.max():>10,.0f}"
               f"  总能量 x{ambient(merged) / ambient(reference):<5.2f}"
               f"  中间调相对误差 中位 {np.median(error) * 100:.2f}%"
               f" / 95 分位 {np.percentile(error, 95) * 100:.2f}%")
