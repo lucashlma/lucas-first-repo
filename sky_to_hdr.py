@@ -836,6 +836,13 @@ def load_label_fonts(size: int = 22):
     return _load_font(LATIN_FONT_CANDIDATES, size), _load_font(CJK_FONT_CANDIDATES, size)
 
 
+def measure_mixed_text(draw, text: str, fonts) -> float:
+    latin_font, cjk_font = fonts
+    return sum(
+        draw.textlength(char, font=latin_font if char.isascii() else cjk_font) for char in text
+    )
+
+
 def draw_mixed_text(draw, xy, text: str, fonts, fill=(235, 235, 240)) -> None:
     """按 ASCII / 非 ASCII 切段分别用对应字体画，避免出现豆腐块。"""
     latin_font, cjk_font = fonts
@@ -844,6 +851,19 @@ def draw_mixed_text(draw, xy, text: str, fonts, fill=(235, 235, 240)) -> None:
         font = latin_font if char.isascii() else cjk_font
         draw.text((x, y), char, fill=fill, font=font)
         x += draw.textlength(char, font=font)
+
+
+def fit_mixed_text(draw, text: str, max_width: float, size: int = 22, floor: int = 11):
+    """挑一个能塞进 max_width 的字号；实在塞不下就截断加省略号。"""
+    while size >= floor:
+        fonts = load_label_fonts(size)
+        if measure_mixed_text(draw, text, fonts) <= max_width:
+            return text, fonts
+        size -= 2
+    fonts = load_label_fonts(floor)
+    while text and measure_mixed_text(draw, text + "…", fonts) > max_width:
+        text = text[:-1]
+    return text + "…", fonts
 
 
 def montage(tiles: list[tuple[str, np.ndarray]], columns: int = 0, gap: int = 8,
@@ -862,9 +882,9 @@ def montage(tiles: list[tuple[str, np.ndarray]], columns: int = 0, gap: int = 8,
     height = rows * (tile_h + label_height) + (rows + 1) * gap + title_height
     canvas = Image.new("RGB", (width, height), (18, 18, 20))
     draw = ImageDraw.Draw(canvas)
-    fonts = load_label_fonts(22)
     if title:
-        draw_mixed_text(draw, (gap + 4, 10), title, load_label_fonts(26), (250, 250, 255))
+        text, title_fonts = fit_mixed_text(draw, title, width - 2 * gap - 8, size=26)
+        draw_mixed_text(draw, (gap + 4, 10), text, title_fonts, (250, 250, 255))
 
     for index, (label, tile) in enumerate(tiles):
         col, row = index % columns, index // columns
@@ -872,7 +892,8 @@ def montage(tiles: list[tuple[str, np.ndarray]], columns: int = 0, gap: int = 8,
         y = title_height + gap + row * (tile_h + label_height + gap)
         data = np.clip(np.asarray(tile) * 255.0 + 0.5, 0, 255).astype(np.uint8)
         canvas.paste(Image.fromarray(data, mode="RGB"), (x, y))
-        draw_mixed_text(draw, (x + 4, y + tile_h + 6), label, fonts)
+        text, fonts = fit_mixed_text(draw, label, tile_w - 8)
+        draw_mixed_text(draw, (x + 4, y + tile_h + 6), text, fonts)
     return canvas
 
 

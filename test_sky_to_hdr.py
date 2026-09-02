@@ -851,6 +851,21 @@ def test_cli_preview_writes_images(tmp_path):
         assert (out_dir / name).is_file()
 
 
+def test_montage_labels_stay_inside_their_tile():
+    from PIL import ImageDraw
+
+    tiles = [
+        ("短", np.zeros((32, 64, 3), dtype=np.float32)),
+        ("很长很长的中英混排标签 with ASCII 也要能塞进去不许溢出", np.zeros((32, 64, 3), dtype=np.float32)),
+    ]
+    image = sky.montage(tiles, columns=2, title="标题同样不能超出画布宽度" * 4)
+
+    draw = ImageDraw.Draw(image)
+    for label, _ in tiles:
+        text, fonts = sky.fit_mixed_text(draw, label, 64 - 8)
+        assert sky.measure_mixed_text(draw, text, fonts) <= 64 - 8
+
+
 def test_tonemap_output_is_in_display_range():
     image = make_test_image(16, 32)
     mapped = sky.tonemap_aces(image, ev=-2.0)
