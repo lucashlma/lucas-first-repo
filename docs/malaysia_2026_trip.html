@@ -27,7 +27,8 @@
 
   .page{
     width:210mm; height:297mm;
-    padding:16mm 16mm 14mm;
+    /* 底部 20mm 是给页脚预留的安全区，正文不得侵入 */
+    padding:16mm 16mm 20mm;
     page-break-after:always;
     position:relative;
     overflow:hidden;
@@ -116,6 +117,11 @@
   .two > *{ flex:1; min-width:0; }
   .thumb{ width:100%; height:44mm; object-fit:cover; border-radius:2mm; display:block; }
 
+  /* 表格密集的页面用它收紧行高 */
+  .dense td, .dense th{ padding:1.7mm 3mm; }
+  .dense td{ line-height:1.5; }
+  .dense h3{ margin:4mm 0 1.5mm; }
+
   .foot{
     position:absolute; bottom:8mm; left:16mm; right:16mm;
     font-size:7.5pt; color:#A99B8A; letter-spacing:.08em;
@@ -175,18 +181,8 @@
     <tr><td>10/3</td><td>深航 ZH330<br>吉隆坡 → 深圳宝安 T3</td><td>19:45 起飞<br>23:55 落地</td><td class="num">¥3,015</td></tr>
   </table>
 
-  <h3>预算</h3>
-  <table>
-    <tr><td>去程 蛇口→槟城（已订）</td><td class="num">¥5,287</td></tr>
-    <tr><td>回程 ZH330</td><td class="num">¥3,015</td></tr>
-    <tr><td>城际交通 + 机场接驳</td><td class="num">¥700–900</td></tr>
-    <tr><td>住宿 6 晚</td><td class="num">¥3,500–5,500</td></tr>
-    <tr><td>门票</td><td class="num">¥2,100–2,500</td></tr>
-    <tr><td>餐饮</td><td class="num">¥2,500–3,500</td></tr>
-    <tr><td>市内 Grab</td><td class="num">¥800–1,200</td></tr>
-    <tr class="total"><td>合计</td><td class="num">¥17,900–21,900</td></tr>
-  </table>
-  <p style="margin-top:3mm">行李全程零成本：去程联运含 60 kg，回程深航含 69 kg。</p>
+  <p style="margin-top:4mm">总预算 ¥17,900–21,900，明细见第 12 页「订票清单与预算」。
+  行李全程零成本：去程联运含 60 kg，回程深航含 69 kg。</p>
 
   <div class="foot"><span>马来西亚 2026</span><span>一页看懂</span></div>
 </div>
@@ -491,10 +487,10 @@
 </div>
 
 <!-- ========== 美食 ========== -->
-<div class="page">
+<div class="page dense">
   <div class="sec-kicker">Food</div>
   <h2>美食清单</h2>
-  <p>结合孤独星球和米其林必比登的推荐。槟城的名摊按时段开，不是全天营业，很多中午前就卖完。</p>
+  <p>结合孤独星球和米其林必比登。槟城名摊按时段开，很多中午前就卖完。</p>
 
   <h3>槟城</h3>
   <table>
@@ -535,7 +531,7 @@
 <!-- ========== 订票 + 实用 ========== -->
 <div class="page">
   <div class="sec-kicker">Checklist</div>
-  <h2>订票清单与实用信息</h2>
+  <h2>订票清单与预算</h2>
 
   <h3>按优先级订</h3>
   <table>
@@ -551,6 +547,26 @@
     <tr><td>9</td><td><b>MDAC 数字入境卡</b></td><td>imigresen-online.imi.gov.my/mdac，免费，三人各一份，注意避开收费假网站</td></tr>
   </table>
   <p style="margin-top:3mm">KL Forest Eco Park 不能网上订，现场付现金。去程机票已订，不用再动。</p>
+
+  <h3>预算总表</h3>
+  <table>
+    <tr><td>去程 蛇口→槟城（已订）</td><td class="num">¥5,287</td></tr>
+    <tr><td>回程 ZH330</td><td class="num">¥3,015</td></tr>
+    <tr><td>城际交通 + 机场接驳</td><td class="num">¥700–900</td></tr>
+    <tr><td>住宿 6 晚</td><td class="num">¥3,500–5,500</td></tr>
+    <tr><td>门票</td><td class="num">¥2,100–2,500</td></tr>
+    <tr><td>餐饮</td><td class="num">¥2,500–3,500</td></tr>
+    <tr><td>市内 Grab</td><td class="num">¥800–1,200</td></tr>
+    <tr class="total"><td>合计</td><td class="num">¥17,900–21,900</td></tr>
+  </table>
+
+  <div class="foot"><span>马来西亚 2026</span><span>订票与预算</span></div>
+</div>
+
+<!-- ========== 门票明细 + 实用信息 ========== -->
+<div class="page dense">
+  <div class="sec-kicker">Reference</div>
+  <h2>门票明细与实用信息</h2>
 
   <h3>门票明细（两大一小）</h3>
   <table>
@@ -576,7 +592,7 @@
     <tr><td><b>着装</b></td><td>黑风洞和极乐寺需过膝。</td></tr>
   </table>
 
-  <div class="foot"><span>马来西亚 2026</span><span>清单</span></div>
+  <div class="foot"><span>马来西亚 2026</span><span>门票与实用信息</span></div>
 </div>
 
 <!-- ========== 附录 ========== -->
