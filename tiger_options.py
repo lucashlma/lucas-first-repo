@@ -13,6 +13,8 @@
     python tiger_options.py expirations AAOI
     python tiger_options.py chain AAOI --expiry 2026-08-21 --min-strike 120 --max-strike 180
     python tiger_options.py spread AAOI --expiry 2026-08-21 --long 133 --short 170 --qty 8 --cost 10.65
+    python tiger_options.py spread AVGO --expiry 2026-09-18 --long 370 --short 420 --cost 13.35
+    python tiger_options.py journal
     python tiger_options.py positions
 """
 
@@ -22,8 +24,10 @@ import argparse
 import os
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 
 REQUIRED_ENV = ("TIGER_ID", "TIGER_ACCOUNT", "TIGER_PRIVATE_KEY_PATH")
+DEFAULT_JOURNAL = Path(__file__).resolve().parent / "trades" / "open.json"
 
 
 @dataclass
@@ -83,6 +87,47 @@ def _mid(bid, ask):
     if have_bid:
         return bid
     return None
+
+
+@dataclass
+class SpreadEconomics:
+    """垂直价差到期结构（debit 为正成本）。"""
+
+    width: float
+    cost: float
+    qty: int
+    max_profit: float
+    breakeven: float
+    multiplier: int
+
+    @property
+    def max_loss(self) -> float:
+        return self.cost
+
+    @property
+    def max_loss_dollars(self) -> float:
+        return self.cost * self.multiplier
+
+    @property
+    def max_profit_dollars(self) -> float:
+        return self.max_profit * self.multiplier
+
+    @property
+    def cost_dollars(self) -> float:
+        return self.cost * self.multiplier
+
+
+def spread_economics(long_strike: float, short_strike: float, cost: float, qty: int = 1) -> SpreadEconomics:
+    """Debit 垂直价差的宽度、打平点、最大盈亏。cost 为每组净借方。"""
+    width = abs(short_strike - long_strike)
+    return SpreadEconomics(
+        width=width,
+        cost=cost,
+        qty=qty,
+        max_profit=width - cost,
+        breakeven=long_strike + cost,
+        multiplier=100 * qty,
+    )
 
 
 def _row_value(row, *names):
@@ -161,9 +206,6 @@ def cmd_spread(quote_client, args) -> None:
     if long_bid and short_ask:
         spread_exit = long_bid - short_ask
 
-    width = abs(args.short - args.long)
-    multiplier = 100 * args.qty
-
     print(f"\n{args.symbol}  {args.expiry}  {args.long}/{args.short} {args.side.upper()} 垂直价差  ×{args.qty} 组\n")
     print(f"  长腿 {args.long:>7.2f}   bid {long_bid}  ask {long_ask}  中值 {long_mid:.2f}")
     print(f"  短腿 {args.short:>7.2f}   bid {short_bid}  ask {short_ask}  中值 {short_mid:.2f}")
@@ -175,21 +217,72 @@ def cmd_spread(quote_client, args) -> None:
         print("\n  未提供 --cost，跳过盈亏计算。")
         return
 
-    max_profit = width - args.cost
-    breakeven = args.long + args.cost
-    print(f"\n  建仓成本        {args.cost:.2f}   (共 ${args.cost * multiplier:,.0f})")
-    print(f"  打平点          {breakeven:.2f}")
-    print(f"  最大亏损        {args.cost:.2f}   (共 ${args.cost * multiplier:,.0f})")
-    print(f"  最大盈利        {max_profit:.2f}   (共 ${max_profit * multiplier:,.0f})")
+    econ = spread_economics(args.long, args.short, args.cost, args.qty)
+    print(f"\n  建仓成本        {econ.cost:.2f}   (共 ${econ.cost_dollars:,.0f})")
+    print(f"  打平点          {econ.breakeven:.2f}")
+    print(f"  最大亏损        {econ.max_loss:.2f}   (共 ${econ.max_loss_dollars:,.0f})")
+    print(f"  最大盈利        {econ.max_profit:.2f}   (共 ${econ.max_profit_dollars:,.0f})")
 
-    pnl = (spread_mid - args.cost) * multiplier
-    captured = (spread_mid - args.cost) / max_profit * 100 if max_profit else 0
+    pnl = (spread_mid - econ.cost) * econ.multiplier
+    captured = (spread_mid - econ.cost) / econ.max_profit * 100 if econ.max_profit else 0
     print(f"\n  当前浮动盈亏    ${pnl:,.0f}   (按中值)")
     print(f"  已实现占最大利润 {captured:.1f}%")
     if spread_exit is not None:
-        pnl_exit = (spread_exit - args.cost) * multiplier
+        pnl_exit = (spread_exit - econ.cost) * econ.multiplier
         print(f"  按保守价平仓    ${pnl_exit:,.0f}")
     print()
+
+
+def load_journal(path: Path | None = None) -> list[dict]:
+    import json
+
+    journal_path = path or DEFAULT_JOURNAL
+    if not journal_path.is_file():
+        raise SystemExit(f"找不到交易日志: {journal_path}")
+    with journal_path.open(encoding="utf-8") as fh:
+        data = json.load(fh)
+    if not isinstance(data, list):
+        raise SystemExit("交易日志必须是 JSON 数组。")
+    return data
+
+
+def format_journal_card(trade: dict) -> str:
+    qty = int(trade.get("qty") or 1)
+    econ = spread_economics(
+        float(trade["long"]),
+        float(trade["short"]),
+        float(trade["cost"]),
+        qty,
+    )
+    reward_risk = econ.max_profit / econ.max_loss if econ.max_loss else 0
+    lines = [
+        f"{trade.get('id', trade['symbol'])}  {trade['symbol']}  {trade['expiry']}",
+        f"  {trade['long']}/{trade['short']} {str(trade.get('side', 'CALL')).upper()}  debit spread  ×{qty} 组",
+        f"  建仓净借方      {econ.cost:.2f}   (${econ.cost_dollars:,.0f})",
+        f"  宽度            {econ.width:.2f}",
+        f"  到期打平        {econ.breakeven:.2f}",
+        f"  最大亏损        {econ.max_loss:.2f}   (${econ.max_loss_dollars:,.0f})  ← 仓位止损",
+        f"  最大盈利        {econ.max_profit:.2f}   (${econ.max_profit_dollars:,.0f})  盈亏比 {reward_risk:.2f}:1",
+    ]
+    if trade.get("stop"):
+        lines.append(f"  止损            {trade['stop']}")
+    if trade.get("take_profit"):
+        lines.append(f"  止盈            {trade['take_profit']}")
+    if trade.get("note"):
+        lines.append(f"  备注            {trade['note']}")
+    return "\n".join(lines) + "\n"
+
+
+def cmd_journal(args) -> None:
+    """打印已记录价差的到期结构（不连行情）。"""
+    trades = load_journal(Path(args.path) if args.path else None)
+    if not trades:
+        print("日志为空。")
+        return
+    for i, trade in enumerate(trades):
+        if i:
+            print()
+        print(format_journal_card(trade))
 
 
 def cmd_positions(trade_client, args) -> None:
@@ -234,11 +327,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_pos = sub.add_parser("positions", help="查询当前持仓")
     p_pos.add_argument("--account", default=None)
 
+    p_journal = sub.add_parser("journal", help="打印交易日志里的价差结构（不连行情）")
+    p_journal.add_argument("--path", default=None, help="JSON 日志路径，默认 trades/open.json")
+
     return parser
 
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
+
+    if args.command == "journal":
+        cmd_journal(args)
+        return 0
+
     creds = load_credentials()
     quote_client, trade_client = build_clients(creds)
 
