@@ -5,6 +5,10 @@
 深圳蛇口出发，香港转机进槟城；陆路南下吉隆坡；吉隆坡直飞回深圳。
 请假三天：9/28、9/29、9/30。
 
+> **图文版**：[`malaysia_2026_trip.pdf`](malaysia_2026_trip.pdf)（13 页 A4，含配图，适合打印或手机上翻）。
+> 排版源文件是 [`malaysia_2026_trip.html`](malaysia_2026_trip.html)，配图在 `trip_assets/`，
+> 改完用 `google-chrome --headless --print-to-pdf` 重新导出即可。
+
 ---
 
 ## 一、为什么是这个日期
