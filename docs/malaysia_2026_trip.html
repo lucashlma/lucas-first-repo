@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>马来西亚 7 天 6 晚 · 槟城 + 吉隆坡</title>
+<style>
+  @page { size: A4; margin: 0; }
+
+  :root{
+    --ink:#2B2119;
+    --ink-soft:#5C5145;
+    --terra:#C4633F;
+    --teal:#2E7D7B;
+    --gold:#C9922F;
+    --cream:#FDF8F0;
+    --line:#E2D7C6;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html,body{
+    font-family:"WenQuanYi Micro Hei","Droid Sans Fallback","DejaVu Sans",sans-serif;
+    color:var(--ink);
+    background:#fff;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .page{
+    width:210mm; height:297mm;
+    /* 底部 20mm 是给页脚预留的安全区，正文不得侵入 */
+    padding:16mm 16mm 20mm;
+    page-break-after:always;
+    position:relative;
+    overflow:hidden;
+    background:#fff;
+  }
+  .page:last-child{ page-break-after:auto; }
+
+  /* ---------- cover ---------- */
+  .cover{ padding:0; }
+  .cover img{ width:210mm; height:150mm; object-fit:cover; display:block; }
+  .cover-body{ padding:14mm 16mm 0; }
+  .cover .kicker{
+    font-size:10pt; letter-spacing:.30em; color:var(--terra);
+    text-transform:uppercase; margin-bottom:7mm;
+  }
+  .cover h1{ font-size:31pt; line-height:1.22; letter-spacing:.01em; }
+  .cover h1 span{ color:var(--terra); }
+  .cover .dates{
+    margin-top:8mm; font-size:15pt; color:var(--ink-soft); letter-spacing:.04em;
+  }
+  .cover .who{ margin-top:3mm; font-size:11pt; color:var(--ink-soft); }
+  .cover .rule{ width:26mm; height:2.6pt; background:var(--gold); margin:9mm 0 7mm; }
+  .cover .route{ font-size:10.5pt; color:var(--ink-soft); line-height:1.85; }
+
+  /* ---------- generic ---------- */
+  .sec-kicker{
+    font-size:8.5pt; letter-spacing:.26em; color:var(--terra);
+    text-transform:uppercase; margin-bottom:2.5mm;
+  }
+  h2{
+    font-size:19pt; margin-bottom:6mm; letter-spacing:.01em;
+    padding-bottom:3mm; border-bottom:2.2pt solid var(--gold);
+  }
+  h3{ font-size:12pt; margin:6mm 0 2.5mm; color:var(--teal); }
+  p{ font-size:10pt; line-height:1.78; color:var(--ink-soft); }
+
+  table{ width:100%; border-collapse:collapse; font-size:9.3pt; margin-top:2mm; }
+  th{
+    text-align:left; background:#F6EFE3; color:var(--ink);
+    padding:2.4mm 3mm; font-weight:bold; border-bottom:1.2pt solid var(--line);
+  }
+  td{ padding:2.4mm 3mm; border-bottom:.7pt solid var(--line); vertical-align:top; line-height:1.62; }
+  td.num{ text-align:right; white-space:nowrap; }
+  tr.total td{ font-weight:bold; color:var(--ink); background:#FBF6EC; border-bottom:none; }
+  .hi{ color:var(--terra); font-weight:bold; }
+
+  /* ---------- day ---------- */
+  .day-head{ display:flex; align-items:flex-end; gap:5mm; margin-bottom:5mm; }
+  .day-num{
+    font-size:34pt; line-height:.86; color:var(--gold); font-weight:bold; letter-spacing:-.02em;
+  }
+  .day-meta .d{ font-size:14.5pt; font-weight:bold; }
+  .day-meta .t{ font-size:10pt; color:var(--ink-soft); margin-top:1.5mm; }
+  .hero{ width:100%; height:66mm; object-fit:cover; display:block; border-radius:2mm; }
+  .caption{ font-size:8pt; color:#8A7D6E; margin-top:1.8mm; margin-bottom:5mm; }
+
+  .tl{ margin-top:1mm; }
+  .tl-row{ display:flex; gap:4mm; padding:2.3mm 0; border-bottom:.7pt solid var(--line); }
+  .tl-row:last-child{ border-bottom:none; }
+  .tl-t{
+    flex:0 0 21mm; font-size:9.3pt; font-weight:bold; color:var(--teal); padding-top:.3mm;
+  }
+  .tl-c{ flex:1; font-size:9.6pt; line-height:1.66; }
+  .tl-c b{ color:var(--ink); }
+  .tl-c em{ font-style:normal; color:#8A7D6E; font-size:8.7pt; display:block; margin-top:.8mm; }
+
+  .note{
+    margin-top:5mm; padding:3.5mm 4mm;
+    background:#FBF4E8; border-left:2.6pt solid var(--terra); border-radius:0 1.5mm 1.5mm 0;
+  }
+  .note .lbl{
+    font-size:8pt; letter-spacing:.16em; color:var(--terra); font-weight:bold; margin-bottom:1.6mm;
+  }
+  .note p{ font-size:9pt; line-height:1.7; color:var(--ink); }
+
+  .eat{
+    margin-top:4mm; padding:3.5mm 4mm;
+    background:#F0F5F1; border-left:2.6pt solid var(--teal); border-radius:0 1.5mm 1.5mm 0;
+  }
+  .eat .lbl{
+    font-size:8pt; letter-spacing:.16em; color:var(--teal); font-weight:bold; margin-bottom:1.6mm;
+  }
+  .eat p{ font-size:9pt; line-height:1.7; color:var(--ink); }
+
+  .two{ display:flex; gap:5mm; }
+  .two > *{ flex:1; min-width:0; }
+  .thumb{ width:100%; height:44mm; object-fit:cover; border-radius:2mm; display:block; }
+
+  /* 表格密集的页面用它收紧行高 */
+  .dense td, .dense th{ padding:1.7mm 3mm; }
+  .dense td{ line-height:1.5; }
+  .dense h3{ margin:4mm 0 1.5mm; }
+
+  .foot{
+    position:absolute; bottom:8mm; left:16mm; right:16mm;
+    font-size:7.5pt; color:#A99B8A; letter-spacing:.08em;
+    display:flex; justify-content:space-between;
+    border-top:.7pt solid var(--line); padding-top:2mm;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== COVER ========== -->
+<div class="page cover">
+  <img src="trip_assets/cover_penang_shophouses.jpg" alt="">
+  <div class="cover-body">
+    <div class="kicker">Family Trip · Malaysia</div>
+    <h1>马来西亚 7 天 6 晚<br><span>槟城 · 吉隆坡</span></h1>
+    <div class="dates">2026 年 9 月 27 日 — 10 月 3 日</div>
+    <div class="who">一家三口（两位大人 + 10 岁小孩）· 请假三天：9/28、9/29、9/30</div>
+    <div class="rule"></div>
+    <div class="route">
+      深圳蛇口坐船进香港机场（不入境香港）→ 飞槟城 · 住 3 晚<br>
+      ETS 火车南下 → 吉隆坡 · 住 3 晚 → 直飞回深圳
+    </div>
+  </div>
+</div>
+
+<!-- ========== 一页看懂 ========== -->
+<div class="page">
+  <div class="sec-kicker">Overview</div>
+  <h2>一页看懂</h2>
+
+  <h3>为什么定这个日期</h3>
+  <p>窗口原本是 9/25 到 10/7，同时覆盖中秋和国庆，中间 9/28 至 9/30 是工作日。
+  两头的实际报价查下来，出发日往后挪一天省 ¥1,288，返程日往前挪一天省 ¥1,790，
+  所以定在 9/27 走、10/3 回，两端都踩在价格洼地上。10/4 之后回国方向进入返程高峰，价格失控。</p>
+
+  <table>
+    <tr><th>香港 → 槟城 UO746（三人含税）</th><th class="num">价格</th></tr>
+    <tr><td>9/26（六，香港中秋节翌日公众假期）</td><td class="num">¥6,575</td></tr>
+    <tr><td><span class="hi">9/27（日）· 采用</span></td><td class="num"><span class="hi">¥5,287</span></td></tr>
+  </table>
+
+  <table style="margin-top:5mm">
+    <tr><th>吉隆坡 → 深圳 深航晚班（三人含税）</th><th class="num">价格</th></tr>
+    <tr><td>10/2（五）</td><td class="num">¥2,833</td></tr>
+    <tr><td><span class="hi">10/3（六）· 采用</span></td><td class="num"><span class="hi">¥3,174</span></td></tr>
+    <tr><td>10/4（日）</td><td class="num">¥4,963</td></tr>
+    <tr><td>10/5（一）</td><td class="num">约 ¥7,070</td></tr>
+    <tr><td>10/6（二）</td><td class="num">约 ¥10,370</td></tr>
+  </table>
+
+  <h3>三段交通</h3>
+  <table>
+    <tr><th style="width:20mm">日期</th><th>班次</th><th>时刻</th><th class="num">三人</th></tr>
+    <tr><td>9/27</td><td>UO7002 + UO746<br>蛇口 → 香港机场 → 槟城　<b>已订</b></td><td>08:45 开船<br>15:40 落地</td><td class="num">¥5,287</td></tr>
+    <tr><td>9/30</td><td>ETS Express EX9109<br>北海 → KL Sentral　<b>已订</b></td><td>13:05 发<br>16:40 到</td><td class="num">RM273</td></tr>
+    <tr><td>10/3</td><td>深航 ZH330<br>吉隆坡 → 深圳宝安 T3</td><td>19:45 起飞<br>23:55 落地</td><td class="num">¥3,015</td></tr>
+  </table>
+
+  <p style="margin-top:4mm">总预算 ¥17,900–21,900，明细见第 12 页「订票清单与预算」。
+  行李全程零成本：去程联运含 60 kg，回程深航含 69 kg。</p>
+
+  <div class="foot"><span>马来西亚 2026</span><span>一页看懂</span></div>
+</div>
+
+<!-- ========== 硬约束 ========== -->
+<div class="page">
+  <div class="sec-kicker">Hard Constraints</div>
+  <h2>错过就没法补的时间点</h2>
+  <p>这张表是整份行程里最该反复看的部分。表外的所有环节都可以浮动。</p>
+
+  <table style="margin-top:5mm">
+    <tr><th style="width:56mm">项目</th><th>约束</th></tr>
+    <tr><td>蛇口预办登机柜台</td><td>9/27 <span class="hi">07:45 前</span>到，船 08:45 开</td></tr>
+    <tr><td>槟榔律驰名叻沙</td><td>09:00–17:30，<span class="hi">周三公休</span>，所以放在 9/29</td></tr>
+    <tr><td>Entopia 蝴蝶园</td><td>09:00–18:00，<span class="hi">17:00 停止入场</span></td></tr>
+    <tr><td>侨生博物馆</td><td>17:00 停止入场</td></tr>
+    <tr><td>汕头街夜市</td><td>17:00 后开摊，热门摊 21:30 前卖完</td></tr>
+    <tr><td>ETS EX9109</td><td>9/30 <span class="hi">13:05 发车</span>，提前 40 分钟到北海站（已订）</td></tr>
+    <tr><td>双子塔观景台</td><td>已订 9/30 <span class="hi">19:00</span>，<span class="hi">18:45 前到塔下</span>，晚到作废</td></tr>
+    <tr><td>KL Forest Eco Park</td><td>08:00–17:30，最后入场 16:30，<span class="hi">周五闭园</span>，<span class="hi">只收现金</span></td></tr>
+    <tr><td>Petrosains 科学馆</td><td>已订 10/1 <span class="hi">14:00</span>；平日最后入场 16:00</td></tr>
+    <tr><td>Aquaria KLCC</td><td>10:00–20:00，19:00 停止入场；喂食 12:30 / 15:30</td></tr>
+    <tr><td>黑风洞</td><td>07:00–21:00；10:00 后旅游团涌入，15:00 后重新清静</td></tr>
+    <tr><td>铭记肉骨茶</td><td>10:30–15:00 / 18:00–21:00，<span class="hi">周二公休</span></td></tr>
+    <tr><td>升旗山缆车</td><td>06:30–23:00；06:30–08:00 是本地人特价时段，人最多，别赶头班</td></tr>
+    <tr><td>KLIA 值机</td><td>10/3 <span class="hi">16:00 前</span>到机场</td></tr>
+  </table>
+
+  <div class="note">
+    <div class="lbl">作息说明</div>
+    <p>全程按「最早 9 点起」排。人潮不是靠早起躲，是靠升旗山快速通道票和把黑风洞挪到下午化解的。
+    最早的一天是 9/29 的 9:00，其余都可以自然醒。</p>
+  </div>
+
+  <div class="foot"><span>马来西亚 2026</span><span>硬约束</span></div>
+</div>
+
+<!-- ========== DAY 1 ========== -->
+<div class="page">
+  <div class="day-head">
+    <div class="day-num">01</div>
+    <div class="day-meta">
+      <div class="d">9 月 27 日 · 周日</div>
+      <div class="t">抵达槟城 · 宿乔治市</div>
+    </div>
+  </div>
+
+  <img class="hero" src="trip_assets/day1_chew_jetty.jpg" alt="">
+  <div class="caption">姓氏桥 Chew Jetty — 百年海上木屋聚落，落日方向正对水面</div>
+
+  <div class="tl">
+    <div class="tl-row"><div class="tl-t">07:45</div><div class="tl-c"><b>蛇口邮轮母港</b>办预办登机，拿全程船票和登机牌<em>行李直挂槟城，到香港后直接去登机口，不入境香港</em></div></div>
+    <div class="tl-row"><div class="tl-t">08:45</div><div class="tl-c">开船，约 09:25 抵香港机场海天码头</div></div>
+    <div class="tl-row"><div class="tl-t">11:55</div><div class="tl-c"><b>UO746</b> 起飞</div></div>
+    <div class="tl-row"><div class="tl-t">15:40</div><div class="tl-c">落地槟城国际机场 → Grab 进乔治市老城入住</div></div>
+    <div class="tl-row"><div class="tl-t">傍晚</div><div class="tl-c"><b>姓氏桥看日落</b><em>木栈道伸进海面，两侧是百年高脚屋</em></div></div>
+    <div class="tl-row"><div class="tl-t">19:00</div><div class="tl-c"><b>新关仔角 Gurney Drive</b> 熟食中心</div></div>
+  </div>
+
+  <div class="eat">
+    <div class="lbl">第一顿</div>
+    <p>Gurney Drive 是海边的大型熟食中心，一个屋檐下品种最全，第一次来最好上手：炒粿条、福建虾面、罗惹、蚝煎、煎蕊一次扫齐。
+    19:00 到 22:00 最挤，早点去占位。大部分摊位清真，含猪肉的在标示专区。收现金和 DuitNow QR。</p>
+  </div>
+
+  <div class="note">
+    <div class="lbl">留白</div>
+    <p>第一天不排任何门票项目，落地就是傍晚，留给孩子缓冲。随心飞票种含 20 kg 托运，
+    但手提只有一件 7 kg 随身物品，<b>不含登机拉杆箱</b>，闸口被拦是 HKD 800 一件。</p>
+  </div>
+
+  <div class="foot"><span>Day 01 · 9/27</span><span>抵达槟城</span></div>
+</div>
+
+<!-- ========== DAY 2 ========== -->
+<div class="page">
+  <div class="day-head">
+    <div class="day-num">02</div>
+    <div class="day-meta">
+      <div class="d">9 月 28 日 · 周一</div>
+      <div class="t">升旗山 · The Habitat · 极乐寺</div>
+    </div>
+  </div>
+
+  <img class="hero" src="trip_assets/day2_penang_hill_canopy.jpg" alt="">
+  <div class="caption">The Habitat — 一亿三千万年的原始雨林，Langur Way 天空步道离地 40 米</div>
+
+  <div class="tl">
+    <div class="tl-row"><div class="tl-t">09:30</div><div class="tl-c">起床，附近茶餐室早餐<em>roti bakar 炭烤面包夹咖椰酱和厚切冷黄油，配两只半生熟蛋和 kopi</em></div></div>
+    <div class="tl-row"><div class="tl-t">10:30</div><div class="tl-c"><b>升旗山缆车下站，买 Fast Lane 快速通道票</b><em>外国人往返 RM80 成人 / RM40 儿童，三人 RM200，比普通票贵 RM125，省下高峰期最长两小时的队</em></div></div>
+    <div class="tl-row"><div class="tl-t">11:00</div><div class="tl-c"><b>The Habitat</b>：Curtis Crest 树冠观景台（槟城最高公共观景点，海拔 555 米，360 度）、Langur Way 天空步道（世界最长双跨带状悬索桥）、1.6 公里雨林步道<em>沿途有叶猴和飞狐猴</em></div></div>
+    <div class="tl-row"><div class="tl-t">13:00</div><div class="tl-c">山顶 <b>Kopi Hutan</b> 午餐<em>孤独星球作者最爱的一处，海拔 730 米喝咖啡配 ondeh ondeh 蛋糕</em></div></div>
+    <div class="tl-row"><div class="tl-t">14:30</div><div class="tl-c">下山，<b>极乐寺</b>（就在山脚 Air Itam，登佛塔 RM10）</div></div>
+    <div class="tl-row"><div class="tl-t">16:30</div><div class="tl-c">回酒店休息</div></div>
+    <div class="tl-row"><div class="tl-t">18:30</div><div class="tl-c"><b>New Lane（Lorong Baru）夜市</b>晚餐</div></div>
+  </div>
+
+  <div class="note">
+    <div class="lbl">别赶头班车</div>
+    <p>官方提醒 06:30 到 08:00 是马来西亚公民的日出特价时段，那会儿本地人反而最多。
+    8 点之后到更清静，加上 Fast Lane 票，10:30 出发完全来得及。</p>
+  </div>
+
+  <div class="eat">
+    <div class="lbl">今晚吃</div>
+    <p>New Lane 是本地人真正吃的那条街，18:00 开摊，队比 Gurney 短。炒粿条、福建虾面、蚝煎都是一流。
+    炒粿条传统用猪油和血蚶，不吃血蚶就说 “no cockles”。</p>
+  </div>
+
+  <div class="foot"><span>Day 02 · 9/28</span><span>升旗山</span></div>
+</div>
+
+<!-- ========== DAY 3 ========== -->
+<div class="page">
+  <div class="day-head">
+    <div class="day-num">03</div>
+    <div class="day-meta">
+      <div class="d">9 月 29 日 · 周二</div>
+      <div class="t">蝴蝶园 · 壁画街 · 汕头街</div>
+    </div>
+  </div>
+
+  <div class="two">
+    <div>
+      <img class="thumb" src="trip_assets/day3_entopia_butterfly.jpg" alt="">
+      <div class="caption">Entopia — 一万五千只蝴蝶自由飞舞</div>
+    </div>
+    <div>
+      <img class="thumb" src="trip_assets/day3_street_art_lane.jpg" alt="">
+      <div class="caption">老城巷弄 — 壁画之外还藏着水泥小人</div>
+    </div>
+  </div>
+
+  <div class="tl">
+    <div class="tl-row"><div class="tl-t">09:00</div><div class="tl-c">起床，早餐 <b>Roti Bakar Hutton Lane</b><em>孤独星球说这是「当所有选择都让你不知所措时」的保底答案，两人 RM9</em></div></div>
+    <div class="tl-row"><div class="tl-t">10:45</div><div class="tl-c"><b>Entopia</b>（Teluk Bahang，车程约 40 分钟）<em>户外 Natureland 是马来西亚最大蝴蝶园；室内 The Cocoon 两层探索中心，下雨照玩。17:00 停止入场</em></div></div>
+    <div class="tl-row"><div class="tl-t">14:00</div><div class="tl-c">午餐 <b>槟榔律驰名叻沙</b>（5 Lebuh Keng Kwee）<em>米其林必比登，1970 年至今传三代。出门左手边就是 1930 年代原版的槟榔律驰名潮州煎蕊，RM4.50 一杯</em></div></div>
+    <div class="tl-row"><div class="tl-t">15:00</div><div class="tl-c"><b>壁画街 + 侨生博物馆</b><em>17:00 停止入场</em></div></div>
+    <div class="tl-row"><div class="tl-t">18:30</div><div class="tl-c"><b>汕头街（Lebuh Kimberley）夜市</b></div></div>
+  </div>
+
+  <div class="note">
+    <div class="lbl">壁画街的正确玩法</div>
+    <p>除了那幅被拍烂的《姐弟共骑》，重点找<b>西班牙雕塑家 Isaac Cordal 的水泥小人</b>（Cement Eclipses 系列）——
+    15 厘米高的小人像藏在窗台、墙角和支架上，散落整片老城，本身就是一场寻宝游戏。
+    孤独星球对那幅网红壁画的评价是「或许有点过头了」，反而力荐这批小人。给孩子做成打卡地图，这个年纪最吃这套。</p>
+  </div>
+
+  <div class="eat">
+    <div class="lbl">汕头街必点</div>
+    <p>78 号的<b>超级天皇鸡脚粿条汤</b>是米其林必比登，要排十五分钟；隔壁<b>天天利茶室</b>是炭火炒粿条。
+    四大天王里的权记山楂饮料正好解腻。想吃一顿正经娘惹菜：Auntie Gaik Lean's Old School Eatery
+    是槟城仅有的两家米其林一星之一，Bibik's Kitchen、Sifu 是必比登级别，都要提前订位。</p>
+  </div>
+
+  <div class="foot"><span>Day 03 · 9/29</span><span>老城一日</span></div>
+</div>
+
+<!-- ========== DAY 4 ========== -->
+<div class="page">
+  <div class="day-head">
+    <div class="day-num">04</div>
+    <div class="day-meta">
+      <div class="d">9 月 30 日 · 周三</div>
+      <div class="t">火车南下 · 双子塔夜景</div>
+    </div>
+  </div>
+
+  <img class="hero" src="trip_assets/day4_ets_train.jpg" alt="">
+  <div class="caption">ETS Express — 北海到吉隆坡 3 小时 35 分，穿过整片棕榈园和石灰岩山</div>
+
+  <div class="tl">
+    <div class="tl-row"><div class="tl-t">自然醒</div><div class="tl-c">上午在乔治市慢慢吃早餐、买手信、逛没逛完的巷子</div></div>
+    <div class="tl-row"><div class="tl-t">11:30</div><div class="tl-c">退房，Grab 走跨海大桥到北海站（约 40 分钟，RM40）</div></div>
+    <div class="tl-row"><div class="tl-t">13:05</div><div class="tl-c"><b>EX9109</b> 发车（已订）</div></div>
+    <div class="tl-row"><div class="tl-t">16:40</div><div class="tl-c">抵达 <b>KL Sentral</b>，入住扔行李就走</div></div>
+    <div class="tl-row"><div class="tl-t">18:45</div><div class="tl-c">到双子塔大厅<em>已订 19:00 场，晚到作废</em></div></div>
+    <div class="tl-row"><div class="tl-t">19:00</div><div class="tl-c"><b>双子塔观景台</b>夜景场<em>日落约 19:10，能赶上天光转灯；建议 20:30 出塔</em></div></div>
+    <div class="tl-row"><div class="tl-t">21:00</div><div class="tl-c">晚餐 <b>Lot 10 Hutong</b> 美食村<em>商场地下，冷气；Hutong 一般 22:00 收摊</em></div></div>
+  </div>
+
+  <div class="note">
+    <div class="lbl">今晚只保两件事</div>
+    <p><b>不要先去 KLCC 公园。</b>公园挪到明天——科学馆就在 Suria KLCC 四楼，出来就是公园门口。
+    今晚只保 18:45 到塔下、21:00 吃上晚饭。</p>
+  </div>
+
+  <div class="note" style="border-left-color:var(--gold)">
+    <div class="lbl" style="color:var(--gold)">今天是周三</div>
+    <p>槟榔律驰名叻沙每周三公休，所以那碗已经在昨天吃掉了。</p>
+  </div>
+
+  <div class="foot"><span>Day 04 · 9/30</span><span>火车南下 · 夜景</span></div>
+</div>
+
+<!-- ========== DAY 5 ========== -->
+<div class="page">
+  <div class="day-head">
+    <div class="day-num">05</div>
+    <div class="day-meta">
+      <div class="d">10 月 1 日 · 周四</div>
+      <div class="t">树冠步道 · 科学馆 · KLCC 公园</div>
+    </div>
+  </div>
+
+  <div class="two">
+    <div>
+      <img class="thumb" src="trip_assets/day5_kl_forest_canopy.jpg" alt="">
+      <div class="caption">KL Forest Eco Park — 市中心的百年雨林保护区</div>
+    </div>
+    <div>
+      <img class="thumb" src="trip_assets/day4_klcc_twin_towers.jpg" alt="">
+      <div class="caption">KLCC 公园 — 从地面拍双子塔最好的机位</div>
+    </div>
+  </div>
+
+  <div class="tl">
+    <div class="tl-row"><div class="tl-t">10:00</div><div class="tl-c"><b>KL Forest Eco Park（Bukit Nanas）</b> 树冠步道<em>1906 年划定的保护区，200 米空中吊桥离地 21 米，桥上能看到吉隆坡塔和天际线，沿途有鸟和猕猴，走完 30–45 分钟</em></div></div>
+    <div class="tl-row"><div class="tl-t">12:00</div><div class="tl-c">午餐 <b>新驰名鸡饭</b>（武吉免登）<em>1965 年老字号，米其林必比登，海南鸡饭完全不辣，孩子最容易接受的一顿</em></div></div>
+    <div class="tl-row"><div class="tl-t">14:00</div><div class="tl-c"><b>Petrosains 科学馆</b>（Suria KLCC 四楼，已订，含 Energy Capsule）<em>七万平方英尺、两层的互动科技馆，孤独星球在吉隆坡专题里点名推荐带孩子来</em></div></div>
+    <div class="tl-row"><div class="tl-t">16:30</div><div class="tl-c"><b>KLCC 公园</b>：儿童游乐场 + 音乐喷泉 + 塔身灯光<em>科学馆出来就是公园门口，不用再赶路</em></div></div>
+    <div class="tl-row"><div class="tl-t">19:30</div><div class="tl-c">亚罗街 <b>黄亚华小食店</b>：烤鸡翅 + 奶油虾</div></div>
+  </div>
+
+  <div class="note">
+    <div class="lbl">两个坑</div>
+    <p>KL Forest Eco Park <b>每周五闭园</b>，所以必须放在今天；而且<b>只收现金、无法网上订票</b>，出门前备好零钱。
+    外国人成人 RM40、儿童 RM5。</p>
+  </div>
+
+  <div class="eat">
+    <div class="lbl">黄亚华</div>
+    <p>孤独星球在「吉隆坡最值得做的九件事」里唯一点名的摊，招牌是炭烤鸡翅。点单说 “tak pedas” 就是不要辣。</p>
+  </div>
+
+  <div class="foot"><span>Day 05 · 10/1</span><span>树冠 · 公园</span></div>
+</div>
+
+<!-- ========== DAY 6 ========== -->
+<div class="page">
+  <div class="day-head">
+    <div class="day-num">06</div>
+    <div class="day-meta">
+      <div class="d">10 月 2 日 · 周五</div>
+      <div class="t">水族馆 · 黑风洞 · 肉骨茶</div>
+    </div>
+  </div>
+
+  <img class="hero" src="trip_assets/day6_batu_caves.jpg" alt="">
+  <div class="caption">黑风洞 — 272 级彩虹阶梯，下午三点后旅游巴士都走了</div>
+
+  <div class="tl">
+    <div class="tl-row"><div class="tl-t">自然醒</div><div class="tl-c">10:00 出发</div></div>
+    <div class="tl-row"><div class="tl-t">10:00</div><div class="tl-c"><b>Aquaria KLCC</b><em>90 米海底隧道是全马最长，隧道内有电动步道，站上去就有沙虎鲨、巨型石斑和绿海龟从头顶游过</em></div></div>
+    <div class="tl-row"><div class="tl-t">12:30</div><div class="tl-c"><b>Living Ocean 喂鲨鱼</b>，提前十分钟到能占好位置</div></div>
+    <div class="tl-row"><div class="tl-t">13:00</div><div class="tl-c">午餐 <b>Sri Nirwana Maju</b> 香蕉叶饭<em>米饭铺在香蕉叶上配咖喱和小菜，本地人用手抓着吃</em></div></div>
+    <div class="tl-row"><div class="tl-t">15:00</div><div class="tl-c">出发去 <b>黑风洞</b><em>Grab 20–30 分钟 RM15–25；或 KL Sentral 坐 KTM 直达 30 分钟，单程才 RM2–4</em></div></div>
+    <div class="tl-row"><div class="tl-t">15:40</div><div class="tl-c">272 级彩虹阶梯 + 洞内神庙，约 1–1.5 小时<em>着装需过膝，注意猴子会抢东西</em></div></div>
+    <div class="tl-row"><div class="tl-t">18:30</div><div class="tl-c">晚餐 <b>铭记肉骨茶</b>（Pudu，八十年老字号传三代）</div></div>
+  </div>
+
+  <div class="note">
+    <div class="lbl">为什么黑风洞放下午</div>
+    <p>旅游巴士 10:00 开始涌入，<b>15:00 后车都走了、太阳也没那么毒</b>，这是官方攻略和清早并列推荐的时段。
+    黑风洞开到 21:00，完全不用赶。把这天最难起的理由消掉了。</p>
+  </div>
+
+  <div class="note" style="border-left-color:var(--gold)">
+    <div class="lbl" style="color:var(--gold)">周五注意</div>
+    <p>下午本地穆斯林做礼拜，市区交通会堵，所以上午安排室内的水族馆，下午再往城外走。</p>
+  </div>
+
+  <div class="foot"><span>Day 06 · 10/2</span><span>黑风洞</span></div>
+</div>
+
+<!-- ========== DAY 7 ========== -->
+<div class="page">
+  <div class="day-head">
+    <div class="day-num">07</div>
+    <div class="day-meta">
+      <div class="d">10 月 3 日 · 周六</div>
+      <div class="t">返程</div>
+    </div>
+  </div>
+
+  <img class="hero" src="trip_assets/day3_night_hawker.jpg" alt="">
+  <div class="caption">六天下来最难忘的往往不是景点，是这些大排档</div>
+
+  <div class="tl">
+    <div class="tl-row"><div class="tl-t">自然醒</div><div class="tl-c">早餐来一份 roti canai 配咖喱和半生熟蛋</div></div>
+    <div class="tl-row"><div class="tl-t">上午</div><div class="tl-c"><b>中央艺术坊</b>买手信<em>孤独星球说这里买手工艺品不用讲价</em></div></div>
+    <div class="tl-row"><div class="tl-t">13:00</div><div class="tl-c">午餐 <b>Madam Kwan's</b><em>椰浆饭和叻沙做得规矩，开在商场里，适合拖着行李的最后一顿</em></div></div>
+    <div class="tl-row"><div class="tl-t">16:00</div><div class="tl-c">到 <b>KLIA</b><em>KLIA Ekspres 33 分钟，或 Grab 约 RM90–110</em></div></div>
+    <div class="tl-row"><div class="tl-t">19:45</div><div class="tl-c"><b>ZH330</b> 起飞</div></div>
+    <div class="tl-row"><div class="tl-t">23:55</div><div class="tl-c">落地 <b>深圳宝安 T3</b></div></div>
+  </div>
+
+  <div class="note">
+    <div class="lbl">提前安排回家的车</div>
+    <p>午夜出关大约凌晨零点半到一点，这个点机场打车要排队。10/4 到 10/7 还都是假期，第二天睡到几点都行。</p>
+  </div>
+
+  <div class="foot"><span>Day 07 · 10/3</span><span>返程</span></div>
+</div>
+
+<!-- ========== 美食 ========== -->
+<div class="page dense">
+  <div class="sec-kicker">Food</div>
+  <h2>美食清单</h2>
+  <p>结合孤独星球和米其林必比登。槟城名摊按时段开，很多中午前就卖完。</p>
+
+  <h3>槟城</h3>
+  <table>
+    <tr><th style="width:34mm">菜</th><th style="width:56mm">去处</th><th>备注</th></tr>
+    <tr><td>亚参叻沙</td><td>槟榔律驰名叻沙</td><td>米其林必比登，<b>周三休</b></td></tr>
+    <tr><td>潮州煎蕊</td><td>槟榔律驰名潮州煎蕊</td><td>叻沙店隔壁，1930 年代原版，RM4.50</td></tr>
+    <tr><td>鸡脚粿条汤</td><td>超级天皇（78 Lebuh Kimberley）</td><td>米其林必比登，排 15 分钟</td></tr>
+    <tr><td>炭火炒粿条</td><td>天天利 / New Lane / Gurney Drive</td><td>不吃血蚶说 “no cockles”</td></tr>
+    <tr><td>福建虾面</td><td>New Lane、Gurney Drive</td><td>虾汤底，不加辣椒酱就不辣</td></tr>
+    <tr><td>蚝煎</td><td>New Lane</td><td></td></tr>
+    <tr><td>Roti bakar</td><td>Roti Bakar Hutton Lane</td><td>配半生熟蛋，两人 RM9</td></tr>
+    <tr><td>娘惹菜</td><td>Auntie Gaik Lean's / Bibik's Kitchen / Sifu</td><td>米其林一星 / 必比登，需订位</td></tr>
+    <tr><td>娘惹糕</td><td>Moh Teng Pheow</td><td>米其林必比登</td></tr>
+  </table>
+
+  <h3>吉隆坡</h3>
+  <table>
+    <tr><th style="width:34mm">菜</th><th style="width:56mm">去处</th><th>备注</th></tr>
+    <tr><td>海南鸡饭</td><td>新驰名鸡饭（武吉免登）</td><td>1965 年，米其林必比登，不辣</td></tr>
+    <tr><td>烤鸡翅</td><td>黄亚华小食店（亚罗街）</td><td>孤独星球点名</td></tr>
+    <tr><td>香蕉叶饭</td><td>Sri Nirwana Maju</td><td>本地人用手抓着吃</td></tr>
+    <tr><td>肉骨茶</td><td>铭记（Pudu）/ 兴记（甲洞）</td><td>药膳味，不辣，兴记是必比登</td></tr>
+    <tr><td>福建面、炒粿条</td><td>Lot 10 Hutong 美食村</td><td>商场地下，冷气</td></tr>
+    <tr><td>蛤蜊米粉</td><td>Lai Foong（茨厂街）</td><td></td></tr>
+    <tr><td>肉干 bak kwa</td><td>茨厂街</td><td>手信</td></tr>
+    <tr><td>椰浆饭、叻沙</td><td>Madam Kwan's</td><td>商场里，最后一顿方便</td></tr>
+  </table>
+
+  <div class="eat">
+    <div class="lbl">给孩子的保底</div>
+    <p>不吃辣的话这些都安全：煎蕊、海南鸡饭、烤鸡翅、肉骨茶、福建虾面（不加辣椒酱）、蚝煎、roti canai、娘惹糕。
+    炒粿条点单说不要辣。亚参叻沙是酸辣的，先让他尝一口再决定要不要单点一碗。</p>
+  </div>
+
+  <div class="foot"><span>马来西亚 2026</span><span>美食</span></div>
+</div>
+
+<!-- ========== 订票 + 实用 ========== -->
+<div class="page">
+  <div class="sec-kicker">Checklist</div>
+  <h2>订票清单与预算</h2>
+
+  <h3>按优先级订</h3>
+  <table>
+    <tr><th style="width:10mm">#</th><th style="width:52mm">项目</th><th>说明</th></tr>
+    <tr><td>1</td><td><b>回程 ZH330</b></td><td>唯一还在浮动的大额项目，越晚越贵，优先锁定</td></tr>
+    <tr><td>2</td><td>ETS 火车 EX9109</td><td><b>已订</b>，三人 RM273</td></tr>
+    <tr><td>3</td><td>住宿</td><td>乔治市 3 晚 + 吉隆坡 3 晚</td></tr>
+    <tr><td>4</td><td>双子塔观景台</td><td><b>已订 9/30 19:00</b>，2 大 1 小</td></tr>
+    <tr><td>5</td><td>升旗山缆车 Express Lane</td><td><b>已订 9/28</b> 往返</td></tr>
+    <tr><td>6</td><td>Petrosains</td><td><b>已订 10/1 14:00</b>，含 Energy Capsule</td></tr>
+    <tr><td>7</td><td>The Habitat</td><td>山顶雨林公园票，和缆车分开；现场或 book.thehabitat.my</td></tr>
+    <tr><td>8</td><td>Entopia、Aquaria</td><td>Entopia 缺儿童票；Aquaria 缺 1 张成人 Off-peak</td></tr>
+    <tr><td>9</td><td><b>MDAC 数字入境卡</b></td><td>imigresen-online.imi.gov.my/mdac，免费，三人各一份，注意避开收费假网站</td></tr>
+  </table>
+  <p style="margin-top:3mm">KL Forest Eco Park 不能网上订，现场付现金。去程机票已订，不用再动。</p>
+
+  <h3>预算总表</h3>
+  <table>
+    <tr><td>去程 蛇口→槟城（已订）</td><td class="num">¥5,287</td></tr>
+    <tr><td>回程 ZH330</td><td class="num">¥3,015</td></tr>
+    <tr><td>城际交通 + 机场接驳</td><td class="num">¥700–900</td></tr>
+    <tr><td>住宿 6 晚</td><td class="num">¥3,500–5,500</td></tr>
+    <tr><td>门票</td><td class="num">¥2,100–2,500</td></tr>
+    <tr><td>餐饮</td><td class="num">¥2,500–3,500</td></tr>
+    <tr><td>市内 Grab</td><td class="num">¥800–1,200</td></tr>
+    <tr class="total"><td>合计</td><td class="num">¥17,900–21,900</td></tr>
+  </table>
+
+  <div class="foot"><span>马来西亚 2026</span><span>订票与预算</span></div>
+</div>
+
+<!-- ========== 门票明细 + 实用信息 ========== -->
+<div class="page dense">
+  <div class="sec-kicker">Reference</div>
+  <h2>门票明细与实用信息</h2>
+
+  <h3>门票明细（两大一小）</h3>
+  <table>
+    <tr><td>升旗山缆车 Fast Lane 往返（RM200）</td><td class="num">¥320</td></tr>
+    <tr><td>The Habitat（约 RM150）</td><td class="num">¥240</td></tr>
+    <tr><td>Entopia</td><td class="num">¥320</td></tr>
+    <tr><td>Aquaria KLCC（RM225）</td><td class="num">¥360</td></tr>
+    <tr><td>Petrosains 平日（RM126）</td><td class="num">¥202</td></tr>
+    <tr><td>KL Forest Eco Park（RM85，现金）</td><td class="num">¥136</td></tr>
+    <tr><td>双子塔观景台</td><td class="num">¥480–800</td></tr>
+    <tr><td>黑风洞、极乐寺</td><td class="num">免费 / RM10</td></tr>
+  </table>
+
+  <h3>实用信息</h3>
+  <table>
+    <tr><td style="width:24mm"><b>签证</b></td><td>中马已互免。普通护照单次停留 30 天内免签，180 天内累计不超过 90 天，护照有效期需 6 个月以上。入境前必须在线填 MDAC。</td></tr>
+    <tr><td><b>时差</b></td><td>没有，两地同为 UTC+8，带孩子不用倒时差。</td></tr>
+    <tr><td><b>插头</b></td><td>英标三孔（Type G），240 V，带转换头。</td></tr>
+    <tr><td><b>打车</b></td><td>全程 Grab，有中文界面。乔治市内一趟 RM7–20。</td></tr>
+    <tr><td><b>现金</b></td><td>KL Forest Eco Park <b>只收现金</b>；槟城跨海渡轮反过来<b>只收卡不收现金</b>，有游客反馈银联刷不过，带一张感应式 Visa 或 Mastercard。</td></tr>
+    <tr><td><b>天气</b></td><td>西海岸午后雷阵雨为主，上午基本晴。孤独星球提到槟城最湿的月份是 10 月和 11 月，我们正好卡在雨季之前。阵雨很少超过一小时。</td></tr>
+    <tr><td><b>烟霾</b></td><td>2026 年是强厄尔尼诺年，9 至 11 月跨境烟霾风险偏高。带 N95，出发前查 apims.doe.gov.my。</td></tr>
+    <tr><td><b>着装</b></td><td>黑风洞和极乐寺需过膝。</td></tr>
+  </table>
+
+  <div class="foot"><span>马来西亚 2026</span><span>门票与实用信息</span></div>
+</div>
+
+<!-- ========== 附录 ========== -->
+<div class="page">
+  <div class="sec-kicker">Appendix</div>
+  <h2>已排除的选项</h2>
+  <p>记下来避免后续反复讨论。以后再想起这些地方，翻一眼就知道当初为什么否掉了。</p>
+
+  <h3>兰卡威</h3>
+  <p>槟城到兰卡威的直达渡轮疫情后已停运至今，网上还在流传的「乔治市三小时船到瓜镇」是过期信息。
+  现在只能飞 40 分钟，或陆路绕瓜拉吉打约 4 到 5 小时。七天里塞三个地方会变成赶场。</p>
+
+  <h3>怡保迷失乐园</h3>
+  <p>主体是水上乐园，不玩水的话性价比垮掉。外国人日票成人 RM160、儿童 RM140，
+  夜间温泉票另算成人 RM130、儿童 RM105，<b>日夜不是一张票</b>。
+  怡保剩下的看点是极乐洞、霹雳洞、三宝洞几个石灰岩洞庙，和行程里已有的极乐寺、黑风洞高度重复——
+  对大人是不同风味，对 10 岁孩子基本是同一件事看三遍。</p>
+
+  <h3>云顶高原</h3>
+  <p>孤独星球的「吉隆坡最值得做的九件事」里完全没有它。
+  Genting SkyWorlds 外国人网购 RM168，而且<b>「儿童票」按身高 90 至 110 厘米定义</b>，
+  10 岁要买成人票，三人加缆车约 ¥900，还要搭两小时车程。
+  同样的钱在市区能玩树冠步道加科学馆，还有找。</p>
+
+  <h3>亚航 AK122（吉隆坡 15:40 → 深圳 19:55）</h3>
+  <p>航班时刻库里有这一班，但实时查询里 10 月上旬并不存在。
+  同日深航更便宜，而且含 23 kg 行李，亚航标准票一公斤免费托运都没有。</p>
+
+  <h3>9/26 出发 / 10/4 返程</h3>
+  <p>见第二页的价格表，两头各贵一千多。请假天数是固定的三天，与出发日无关，
+  所以「多出来的那天」只能拿钱衡量，而它的边际价值不高。</p>
+
+  <div class="note" style="margin-top:8mm">
+    <div class="lbl">还有一件事</div>
+    <p>本册插图为 AI 绘制的示意图，用于快速识别地点氛围，不是实景照片。</p>
+  </div>
+
+  <div class="foot"><span>马来西亚 2026</span><span>附录</span></div>
+</div>
+
+</body>
+</html>
