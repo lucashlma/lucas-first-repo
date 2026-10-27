@@ -1,5 +1,12 @@
 # lucas-first-repo
 
+## AI 控制 Blender 场景构建工作流
+
+针对 Hirokazu Yokohara（`@Yokohara_h`）2026 年 10 月发布的视频
+[Creating a high-quality Blender scene with AI](https://www.youtube.com/watch?v=kCuoHpv-uZY)，
+拆解其「全程不手动碰 Blender、用 GPT-6 Astra + Claude Opus + 外部 3D 生成器搭建高细节书房并自动移植 UE5」的五步工作流、双模型分工、四视图自检脚本与复现配置：
+见 [docs/ai_blender_workflow.md](docs/ai_blender_workflow.md)。
+
 ## sky_to_hdr.py
 
 把自定义天空图转成 Radiance HDR（`.hdr`），用于 UE 的 SkyLight / HDRI Backdrop。
