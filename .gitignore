@@ -1,3 +1,4 @@
+blender_workroom/output/
 __pycache__/
 *.pyc
 .pytest_cache/
