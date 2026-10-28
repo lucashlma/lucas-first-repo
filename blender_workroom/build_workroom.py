@@ -430,10 +430,22 @@ def render_clay(mats: dict[str, bpy.types.Material]) -> None:
     if volume:
         volume.hide_render = True
     clay = material("Diagnostic clay", (0.50, 0.50, 0.48, 1), 0.70)
-    scene.view_layers[0].material_override = clay
+    material_backup: dict[str, list[bpy.types.Material]] = {}
+    for obj in scene.objects:
+        if obj.type not in {"MESH", "CURVE"} or obj == volume:
+            continue
+        material_backup[obj.name] = list(obj.data.materials)
+        obj.data.materials.clear()
+        obj.data.materials.append(clay)
     scene.render.filepath = str(OUTPUT / "02_neutral_clay.png")
     bpy.ops.render.render(write_still=True)
-    scene.view_layers[0].material_override = None
+    for obj_name, original_materials in material_backup.items():
+        obj = bpy.data.objects.get(obj_name)
+        if not obj:
+            continue
+        obj.data.materials.clear()
+        for original in original_materials:
+            obj.data.materials.append(original)
     if volume:
         volume.hide_render = False
 
