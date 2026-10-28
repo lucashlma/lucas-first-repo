@@ -400,7 +400,9 @@ def make_materials() -> dict[str, bpy.types.Material]:
 
 def configure_render() -> None:
     scene = bpy.context.scene
-    scene.render.engine = "BLENDER_EEVEE_NEXT"
+    scene.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in {
+        item.identifier for item in scene.render.bl_rna.properties["engine"].enum_items
+    } else "BLENDER_EEVEE"
     scene.render.resolution_x = 960
     scene.render.resolution_y = 540
     scene.render.resolution_percentage = 100
@@ -412,7 +414,9 @@ def configure_render() -> None:
 
 def render_final() -> None:
     scene = bpy.context.scene
-    scene.render.engine = "BLENDER_EEVEE_NEXT"
+    scene.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in {
+        item.identifier for item in scene.render.bl_rna.properties["engine"].enum_items
+    } else "BLENDER_EEVEE"
     scene.render.filepath = str(OUTPUT / "03_daylight_final.png")
     bpy.ops.render.render(write_still=True)
 
