@@ -27,3 +27,11 @@ ai_workroom.blend           # 可编辑 Blender 工程
 ```
 
 脚本会先清空当前场景，因此建议在新的 Blender 文件中运行。
+
+## 本机 Cursor Desktop 实时控制
+
+要让 Cursor Agent 直接操作本机 Blender、读取视口并调用 Tripo 等 AI 3D 生成器，
+请按 [`LOCAL_MCP_PIPELINE.md`](LOCAL_MCP_PIPELINE.md) 配置。
+
+安装完成后先执行 [`SMOKE_TEST.md`](SMOKE_TEST.md)，确认
+“执行 → 视觉检查 → 自主纠正 → 另存 `.blend`”闭环连通，再开始正式场景。

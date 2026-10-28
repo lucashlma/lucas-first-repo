@@ -1,0 +1,43 @@
+---
+description: AI 驱动 Blender 场景构建、检查、渲染和资产生成规则
+globs:
+  - "blender_workroom/**"
+alwaysApply: false
+---
+
+# Blender MCP 工作规则
+
+处理 `blender_workroom/` 下的任务时：
+
+1. **先检查连接与现场**
+   - 首先调用 `get_addon_status`，确认 Blender、插件版本与已启用的资产源；
+   - 再用 `get_scene_info` 读取当前文件、活动集合、摄像机、对象数和渲染引擎；
+   - 不假设当前 Blender 是空场景，不删除用户已有对象。
+
+2. **隔离本轮生成内容**
+   - 默认把新对象放入以任务命名的独立 Collection；
+   - 对象采用语义化名称，避免 `Cube.001`、`Material.002`；
+   - 每个阶段完成后保存一个版本化 `.blend` 检查点。
+
+3. **混合资产路由**
+   - 房间壳体、规则家具、硬表面设备、书籍、杯子和电线优先用 `execute_blender_code` + `bpy` 构建；
+   - 人体工学椅、角色手办、软包和复杂有机体优先用 `generate_3d`；
+   - 生成资产导入后必须检查真实尺寸、原点、底部 Z、法线、材质槽和面数。
+
+4. **按层级搭建**
+   - Stage A：房间壳体与主镜头；
+   - Stage B：大件家具；
+   - Stage C：中型设备；
+   - Stage D：微观杂物与线材；
+   - 每一阶段都必须使用 `look` 输出 `solid/random-color` 或 `wireframe` 视图，检查穿模、浮空和动线。
+
+5. **视觉闭环**
+   - 几何通过后再做材质；
+   - 材质完成后输出 Neutral Clay 与 Material/Rendered 视图；
+   - 最终至少检查 Camera、Front、Side 和 Top 四个方向；
+   - 发现问题时先定位对象名和变换，再做局部修正，不重建整个场景。
+
+6. **安全边界**
+   - 不运行 shell、网络请求、包安装或读取仓库外文件的 Blender Python；
+   - 不覆盖用户已有 `.blend`；默认另存为带任务名和版本号的新文件；
+   - 调用付费 3D 生成前先列明将生成的资产和数量，由用户确认后再执行。
