@@ -423,6 +423,9 @@ def render_final() -> None:
 
 def render_clay(mats: dict[str, bpy.types.Material]) -> None:
     scene = bpy.context.scene
+    scene.render.engine = "BLENDER_EEVEE_NEXT" if "BLENDER_EEVEE_NEXT" in {
+        item.identifier for item in scene.render.bl_rna.properties["engine"].enum_items
+    } else "BLENDER_EEVEE"
     volume = bpy.data.objects.get("RoomVolume")
     if volume:
         volume.hide_render = True
