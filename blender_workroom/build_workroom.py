@@ -423,15 +423,23 @@ def render_final() -> None:
 
 def render_clay(mats: dict[str, bpy.types.Material]) -> None:
     scene = bpy.context.scene
+    volume = bpy.data.objects.get("RoomVolume")
+    if volume:
+        volume.hide_render = True
     clay = material("Diagnostic clay", (0.50, 0.50, 0.48, 1), 0.70)
     scene.view_layers[0].material_override = clay
     scene.render.filepath = str(OUTPUT / "02_neutral_clay.png")
     bpy.ops.render.render(write_still=True)
     scene.view_layers[0].material_override = None
+    if volume:
+        volume.hide_render = False
 
 
 def render_random_color() -> None:
     scene = bpy.context.scene
+    volume = bpy.data.objects.get("RoomVolume")
+    if volume:
+        volume.hide_render = True
     scene.render.engine = "BLENDER_WORKBENCH"
     scene.display.shading.light = "STUDIO"
     scene.display.shading.color_type = "RANDOM"
@@ -441,6 +449,8 @@ def render_random_color() -> None:
     scene.display.shading.show_specular_highlight = False
     scene.render.filepath = str(OUTPUT / "01_layout_random_color.png")
     bpy.ops.render.render(write_still=True)
+    if volume:
+        volume.hide_render = False
 
 
 def main() -> None:
